@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="753" height="898"
+	 xmlns:ns1="components.*" creationComplete="init()">
+<mx:Script>
+	<![CDATA[
+		import clases.Cliente;
+		import mx.collections.ArrayCollection;
+		import clases.MET;
+		import mx.controls.Alert;
+		
+		private function init():void{
+		}
+		private function cancelarClick():void{
+			(this.parent as VerTodosClientes ).showVerTodos();
+		}
+		private function registrarClick():void{
+			var validador:int=-1;
+			if(this.rutInput0.text=="" || this.rutInput.text==""){
+				Alert.show("Error, debe ingresar el rut correctamente!");
+				return;
+			}
+			if(this.rutInput0.text.toUpperCase()=="K")
+				validador =10;
+			else if(this.rutInput0.text=="0")
+				validador =11;
+			else{
+				validador = parseInt(this.rutInput0.text);
+			}
+			if(Scripts.checkRut(this.rutInput.text, validador)){
+				var rut:String = this.rutInput.text + this.rutInput0.text.toUpperCase();
+				var cliente:Cliente = new Cliente();
+				cliente.cargo = this.cargoInput.text;
+				cliente.check0 = this.check0.selected.toString();
+				cliente.check1 = this.check1.selected.toString();
+				cliente.check2 = this.check2.selected.toString();
+				cliente.check3 = this.check3.selected.toString();
+				cliente.check4 = this.check4.selected.toString();
+				cliente.check5 = this.check5.selected.toString();
+				cliente.check6 = this.check6.selected.toString();
+				cliente.check7 = this.check7.selected.toString();
+				cliente.como_supo = this.comoSupoCombo.selectedItem.toString();
+				cliente.competencia = this.competenciaCombo.selectedItem.toString();
+				cliente.direccion = this.direccionInput.text;
+				cliente.email = this.emailInput.text;
+				cliente.empleados = this.empleadosCombo.selectedItem.toString()
+				cliente.facturacion = this.facturacionCombo.selectedItem.toString()
+				cliente.fono = this.telefonoInput.text;
+				cliente.giro = this.giroInput.text;
+				cliente.mercado = this.mercadoCombo.selectedItem.toString();
+				cliente.nombre = this.nombreInput.text;
+				cliente.nombre_contacto = this.nombreContactoInput.text;
+				cliente.observaciones = this.observacionesInput.text;
+				cliente.producto = this.productoInput.text;
+				cliente.requerimientos = this.requerimientosInput.text;
+				cliente.rut = rut;
+				cliente.sector = this.sectorCombo.selectedItem.toString();
+				cliente.sucursales = this.sucursalesCombo.selectedItem.toString();
+				var c:Conexion = new Conexion;
+				c.insertCliente(cliente);
+			
+			}
+			else{
+				Alert.show("Error!, Ingrese Rut válido");
+			}
+		}
+		private function getFormattedDate(date:Date):String{
+			var finalDate:String;
+			finalDate = date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
+			return finalDate;
+		}
+		private function nuevoRegistroClick():void{
+			(this.parent as VerTodosClientes).nuevoClick();	
+		}
+	]]>
+</mx:Script>
+	<mx:Text x="10" y="10" text="Registro de un nuevo Cliente" fontSize="11"/>
+	<mx:Canvas x="11" y="37" width="732" height="821" borderStyle="inset">
+		<mx:Text x="10" y="36" text="Nombre de la empresa"/>
+		<mx:TextInput x="10" y="62" width="205" id="nombreInput"/>
+		<mx:TextInput x="261.5" y="62" id="rutInput" width="114" maxChars="8" toolTip="ejemplo de rut: 11222333-4"/>
+		<mx:TextInput x="401.5" y="62" id="rutInput0" width="22" maxChars="1"/>
+		<mx:TextInput x="513" y="62" id="direccionInput" width="205"/>
+		<mx:TextInput x="10" y="118" id="giroInput" width="205"/>
+		<mx:TextInput x="261.5" y="116" id="productoInput" width="205"/>
+		<mx:TextInput x="10" y="174" id="nombreContactoInput" width="205"/>
+		<mx:TextInput x="261.5" y="174" id="cargoInput" width="205"/>
+		<mx:TextInput x="513" y="174" id="emailInput" width="205"/>
+		<mx:TextInput x="10" y="230" id="telefonoInput" width="205"/>
+		<mx:TextInput x="261.5" y="230" id="observacionesInput" width="456.5"/>
+		<mx:Text x="262" y="36" text="Rut"/>
+		<mx:Text x="383.5" y="64" text="-"/>
+		<mx:Text x="513" y="38" text="Dirección comercial"/>
+		<mx:Text x="10" y="92" text="Giro y/o actividad"/>
+		<mx:Text x="261.5" y="90" text="Producto y/o servicio"/>
+		<mx:Text x="309.5" y="296" text="Empleados"/>
+		<mx:Text x="440" y="296" text="Sector económico"/>
+		<mx:Text x="10" y="412" text="Sucursales"/>
+		<mx:Text x="10" y="204" text="Teléfono"/>
+		<mx:Text x="10" y="296" text="Facturación"/>
+		<mx:ComboBox x="10" y="322" width="254.5" id="facturacionCombo">
+			<mx:dataProvider>
+				<mx:Array>
+					<mx:String>Micro: facturación hasta 2.400 UF año</mx:String>
+				    <mx:String>Pequeña: 2.401 a 25.500 UF año</mx:String>
+				    <mx:String>Mediana: 25.001 a 100.000 UF año</mx:String>
+				    <mx:String>Grande: Sobre 100.000 UF año</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="309.5" y="322" width="91.5" id="empleadosCombo">
+			<mx:dataProvider>
+				<mx:Array>
+					<mx:String>0 a 10</mx:String>
+					<mx:String>11 a 30</mx:String>
+					<mx:String>31 a 50</mx:String>
+					<mx:String>51 a 100</mx:String>
+					<mx:String>más de 100</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="440" y="322" width="136" id="sectorCombo">
+			<mx:dataProvider>
+				<mx:Array >
+					<mx:String>Industrial</mx:String>
+					<mx:String>Agroindustrial</mx:String>
+					<mx:String>Manufacturero</mx:String>
+				    <mx:String>Agrícola</mx:String>
+				    <mx:String>Forestal</mx:String>
+				    <mx:String>Agropecuario</mx:String>
+				    <mx:String>Vitivinícola</mx:String>
+				    <mx:String>Construcción</mx:String>
+				    <mx:String>Servicios</mx:String>
+				    <mx:String>Transporte</mx:String>
+				    <mx:String>Minería</mx:String>
+				    <mx:String>Otro</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="10" y="382" id="mercadoCombo" width="254.5">
+			<mx:dataProvider>
+				<mx:Array>
+					<mx:String>100% Nacional</mx:String>
+				    <mx:String>100% Exportación</mx:String>
+				    <mx:String>Equilibrio Nacional-Exportación</mx:String>
+				    <mx:String>Fuerte nacional, pequeño exportador</mx:String>
+				    <mx:String>Fuerte exportador, pequeño nacional</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="309.5" y="382" id="competenciaCombo" width="408.5">
+			<mx:dataProvider>
+				<mx:Array>
+					<mx:String>Genera exportaciones que compiten internacionalmente</mx:String>
+				    <mx:String>Los productos o servicios compiten con importadores</mx:String>
+					<mx:String>Los productos y servicios compiten con filiales extranjeras</mx:String>
+					<mx:String>El negocio genera exportación con exigencias internacionales</mx:String>
+					<mx:String>El negocio requiere exigencias de estándares nacionales</mx:String>
+					<mx:String>Genera productos para exportaciones forma indirecta</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="10" y="438" width="254.5" id="sucursalesCombo">
+			<mx:dataProvider>
+				<mx:Array>
+					<mx:String>Sólo casa matriz</mx:String>
+					<mx:String>Casa matriz y obras en terreno</mx:String>
+					<mx:String>Casa matriz y sucursal</mx:String>
+					<mx:String>Dos o más sucursales</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		
+		<mx:Text x="309.5" y="412" text="¿Cómo supo  de KIMEN?"/>
+		<mx:ComboBox x="309.5" y="438" width="408.5" id="comoSupoCombo">
+			<mx:dataProvider>
+				<mx:Array >
+					<mx:String>Por nuestro sitio Web</mx:String>
+					<mx:String>A través del registro INN o CORFO</mx:String>
+					<mx:String>Recomendación o referencia de algún cliente nuestro</mx:String>
+					<mx:String>Recomentaciones o referencias de terceros</mx:String>
+					<mx:String>Google u otro buscador en internet</mx:String>
+					<mx:String>Otro medio de información</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		
+		<mx:Text x="10" y="10" text="Datos de la Empresa" fontWeight="bold"/>
+		<mx:Text x="10" y="270" text="Perfil de la empresa" fontWeight="bold"/>
+		<mx:Text x="10" y="478" text="Información General" fontWeight="bold"/>
+		<mx:Text x="10" y="672" text="Requerimientos específicos" fontWeight="bold"/>
+		<mx:HRule x="10" y="662" width="708"/>
+		<mx:Text x="10" y="504" text="Por favor responda marcando la opción de verificación, todas las preguntas están dirigidas a la organización &#xa;que usted representa" width="708"/>
+		<mx:Text x="10" y="356" text="Mercado"/>
+		
+		<mx:Text x="309.5" y="356" text="Competencia"/>
+		
+		
+		<mx:HRule x="10" y="260" width="708"/>
+		<mx:Text x="10" y="148" text="Nombre del contacto"/>
+		<mx:Text x="513" y="148" text="Correo electrónico"/>
+		<mx:Text x="261.5" y="148" text="Cargo"/>
+		<mx:Text x="261.5" y="204" text="Observaciones"/>
+		<mx:HRule x="10" y="468" width="708"/>
+		<mx:CheckBox x="10" y="542" label="Posee un sistema de gestión implementado bajo algún estándar" id="check0" fontSize="9"/>
+		<mx:CheckBox x="375" y="542" label="La empresa tiene procedimientos o manuales escritos" id="check1" fontSize="9"/>
+		<mx:CheckBox x="10" y="572" label="Proyecta o le gustaría implementar algún estándar específico" id="check2" fontSize="9"/>
+		<mx:CheckBox x="375" y="572" label="Ha pensado en el mediano plazo (2 años) certificar su empresa" id="check3" fontSize="9"/>
+		<mx:CheckBox x="10" y="602" label="Cuenta con una estructura documentado (organigrama, cargos)" id="check4" fontSize="9"/>
+		<mx:CheckBox x="375" y="602" label="Cuenta con alguna certificación (Calidad, Ambiente, Alimentos)" id="check5" fontSize="9"/>
+		<mx:CheckBox x="10" y="632" label="Utiliza la franquicia SENCE para sus proyectos de capacitación" id="check6" fontSize="9"/>
+		<mx:CheckBox x="375" y="632" label="Ha utilizado instrumentos para algún proyecto de su empresa" id="check7" fontSize="9"/>
+		<mx:TextArea x="10" y="698" width="708" borderStyle="inset" id="requerimientosInput" height="109"/>
+	
+	</mx:Canvas>
+	<mx:Button x="664" y="866" label="Registrar" id="registrarButton" click="registrarClick()"/>
+	<mx:Button x="543" y="866" label="Nuevo Registro" id="registrarButton0" click="nuevoRegistroClick()"/>
+	<mx:Button x="460" y="866" label="Cancelar" click="{cancelarClick()}"/>
+</mx:Canvas>

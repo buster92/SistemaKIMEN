@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" title="Inicio de sesión" layout="absolute" width="218" 
+	height="244" defaultButton="{iniciarButton}"  borderColor="#F49821" borderAlpha="0.7" creationComplete="{creationCompleteEvent()}">
+<mx:Script>
+	<![CDATA[
+		import mx.rpc.events.ResultEvent;
+		import mx.rpc.http.mxml.HTTPService;
+		import mx.controls.Alert;
+		private var emailService:HTTPService =  new HTTPService;
+		
+		private function creationCompleteEvent():void
+		{
+			emailService.url = "http://www.kimen.cl/amfphp/services/email.php";
+			emailService.method="POST"; 
+			emailService.resultFormat="xml";
+			emailService.addEventListener(ResultEvent.RESULT, emailResult);
+			
+			emailService.useProxy=false;
+			
+		}
+		public function sendEmail(rut:String):void{
+			var c:Conexion = new Conexion;        
+            c.gateway.call("email.send_email_clave", new Responder(emailResult,emailResult),
+            rut);
+           
+        }    
+        
+        public function emailResult(result:String):void{
+        	if(result=="0"){
+        		Alert.show("Contraseña enviada correctamente");
+        	}
+         	else if(result=="-1")
+         	{
+         		Alert.show("Usuario no existe en Sistema KIMEN");
+         		
+         	}   
+         	else{
+         		Alert.show("Error al enviar contraseña, favor informar a KIMEN Administración");
+         	}
+        }
+		private function onKey():void
+		{
+			this.userInput.text = this.userInput.text.toUpperCase();
+		}
+		private function recuperarClick():void
+		{
+			
+			if(this.userInput.text.length>0)
+			{
+				sendEmail(this.userInput.text);
+			}
+			else
+			{
+				Alert.show("Error, debe ingresar su Rut como Usuario primero");
+			}
+		}
+	]]>
+</mx:Script>
+	<mx:Button x="108" y="164" label="Iniciar" id="iniciarButton" />
+	<mx:Button x="25" y="164" label="Cancelar" id="cancelarButton"/>
+	<mx:Text x="10" y="10" text="Usuario:"/>
+	<mx:Text x="10" y="66" text="Contraseña:"/>
+	<mx:TextInput x="31" y="36" width="140" id="userInput" keyUp="onKey()"/>
+	<mx:TextInput x="31" y="91" displayAsPassword="true" width="140" id="userPass"/>
+	<mx:LinkButton x="43" y="121" label="Recuperar contraseña" fontSize="9" click="{recuperarClick()}"/>
+	
+</mx:Panel>

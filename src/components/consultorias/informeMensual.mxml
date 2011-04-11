@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" title="Informe Mensual de Consultorías" layout="absolute" width="770" 
+	height="500" defaultButton="{imprimirButton}" borderColor="#F49821" borderAlpha="0.7">
+	<mx:Script>
+		<![CDATA[
+			import mx.utils.StringUtil;
+			import clases.PlanificacionInformeMensual;
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.managers.PopUpManager;
+			import com.flexoop.utilities.dateutils.DateUtils;
+			import org.alivepdf.pdf.PDF;	
+			import org.alivepdf.display.Display;
+			import org.alivepdf.layout.*;
+			import org.alivepdf.saving.Method;
+			import org.alivepdf.fonts.*;
+			import org.alivepdf.colors.RGBColor;
+			
+			import flash.display.BitmapData;
+			import mx.graphics.codec.JPEGEncoder;
+			import org.alivepdf.images.ColorSpace;
+			
+			public var month:int;
+			public var year:int;
+			[Bindable]
+			private var listaMET:ArrayCollection;
+			[Bindable]
+			private var listaConsult:ArrayCollection;
+			[Bindable]
+			private var listaDias:ArrayCollection;
+			private var fechaInicial:Date;
+			private var fechaFinal:Date;
+			private var pagina:int=0;
+			private var MetsPorPagina:int=5;
+			private var diasMes:int;
+			
+			public function init():void{
+				listaDias = new ArrayCollection();
+				//month=1;
+				//year=2010;
+				getData();
+				
+				diasMes = DateUtils.daysInMonth(new Date(year,month));
+				
+				fechaInicial = new Date(year,month,1);
+				fechaFinal = new Date(year,month,diasMes);
+				var minuteTimer:Timer = new Timer(1000, 2);
+				minuteTimer.addEventListener(TimerEvent.TIMER_COMPLETE, onTimerComplete);
+				minuteTimer.start();
+			}
+			
+         
+	        private function onTimerComplete(event:TimerEvent):void{
+	        	setData();
+	        	
+			}
+			
+			private function setData():void{
+				var i:int;
+				var mesString:String;
+				switch(this.fechaInicial.getMonth()+1){
+					case 1: mesString = "Enero";
+						break;
+					case 2: mesString = "Febrero";
+						break;
+					case 3: mesString = "Marzo";
+						break;
+					case 4: mesString = "Abril";
+						break;
+					case 5: mesString = "Mayo";
+						break;
+					case 6: mesString = "Junio";
+						break;
+					case 7: mesString = "Julio";
+						break;
+					case 8: mesString = "Agosto";
+						break;
+					case 9: mesString = "Septiembre";
+						break;
+					case 10: mesString = "Octubre";
+						break;
+					case 11: mesString = "Noviembre";
+						break;
+					case 12: mesString = "Diciembre";
+						break;
+				}
+				this.txtMes.text = "Mes: "+mesString;
+				for(i=0;i<listaMET.length;i++){
+					if(this.listaMET.getItemAt(i).programable==0){//met no programable
+						listaMET.removeItemAt(i);
+						i--;
+					}
+				}
+				try{
+					colMet1.headerText = this.listaMET.getItemAt((pagina*MetsPorPagina)+0).nombres;
+					colMet2.headerText = this.listaMET.getItemAt((pagina*MetsPorPagina)+1).nombres;
+					colMet3.headerText = this.listaMET.getItemAt((pagina*MetsPorPagina)+2).nombres;
+					colMet4.headerText = this.listaMET.getItemAt((pagina*MetsPorPagina)+3).nombres;
+					colMet5.headerText = this.listaMET.getItemAt((pagina*MetsPorPagina)+4).nombres;
+				}
+				catch(err:Error){}
+				for(i=0;i<diasMes;i++){
+					listaDias.addItem( new PlanificacionInformeMensual(i+1));
+				}
+				for(i=0;i<listaConsult.length;i++){
+					var elemento:Object = listaConsult.getItemAt(i);
+					var fecha:Date = new Date(elemento.fecha);
+					if(fecha.getTime()>=fechaInicial.getTime() && fecha.getTime()<=fechaFinal.getTime() && StringUtil.trim(elemento.actividad)!=""){
+						var dia:int = fecha.getDate();
+						var semana:PlanificacionInformeMensual = listaDias.getItemAt(dia-1) as PlanificacionInformeMensual;
+						semana.numDia = dia;
+						var numeroMet:int = buscaNumeroMet(elemento.met);
+						if(elemento.jornada==0 && numeroMet!=-1){
+							switch(numeroMet){
+								case 0:
+									semana.actividadMet1 = elemento.actividad + semana.actividadMet1;
+									break;
+								case 1:
+									semana.actividadMet2 = elemento.actividad + semana.actividadMet2;
+									break;
+								case 2:
+									semana.actividadMet3 = elemento.actividad + semana.actividadMet3;
+									break;
+								case 3:
+									semana.actividadMet4 = elemento.actividad + semana.actividadMet4;
+									break;
+								case 4:
+									semana.actividadMet5 = elemento.actividad + semana.actividadMet5;
+									break;
+							}
+							listaDias.setItemAt(semana,dia-1);
+						}
+						else if(numeroMet!=-1){
+							switch(numeroMet){
+								case 0:
+									semana.actividadMet1 = semana.actividadMet1 + " y "+ elemento.actividad;
+									break;
+								case 1:
+									semana.actividadMet2 = semana.actividadMet2 + " y "+ elemento.actividad;
+									break;
+								case 2:
+									semana.actividadMet3 = semana.actividadMet3 + " y "+ elemento.actividad;
+									break;
+								case 3:
+									semana.actividadMet4 = semana.actividadMet4 + " y "+ elemento.actividad;
+									break;
+								case 4:
+									semana.actividadMet5 = semana.actividadMet5 + " y "+ elemento.actividad ;
+									break;
+							}
+							listaDias.setItemAt(semana,dia-1);
+						}
+						
+						
+					}
+				}
+			}
+			private function buscaNumeroMet(rut:String):int{
+				for(var i:int=0;i<listaMET.length && i<5;i++){
+					var met:Object = listaMET.getItemAt((pagina*MetsPorPagina)+i);
+					if(met.rut==rut)
+						return i;
+				}
+				return -1;
+			}
+			private function imprimirClick():void{
+				var p:PDF = new PDF( Orientation.PORTRAIT, Unit.MM, Size.LETTER);
+				p.addPage();
+				p.setX(80);
+				p.textStyle( new RGBColor(0x000000) );
+				
+				
+			
+				var bitmapData:BitmapData = new BitmapData(3*canvasInforme.width,3*canvasInforme.height);
+					// Again 3 is for scaling we are passing for transformation matrix
+				bitmapData.draw(canvasInforme,new Matrix(3,0,0,3),null,null,null,true);
+				var jpgEncoder:JPEGEncoder = new JPEGEncoder();
+				var ba:ByteArray = jpgEncoder.encode(bitmapData);
+				p.addImageStream(ba,ColorSpace.DEVICE_RGB, 
+				new Resize ( Mode.FIT_TO_PAGE, Position.CENTERED ), 0, 0, 0, 0, 0, 1, "Normal", null);
+				p.writeText(25,"Informe Mensual de Consultorías");
+				var archivo:FileReference = new FileReference;
+				archivo.save(p.save(Method.LOCAL), "Informe mensual.pdf");
+			}
+			private function cancelarClick():void{
+				PopUpManager.removePopUp(this);
+				
+			}
+			private function getData():void{
+	         	var c:Conexion = new Conexion;
+	            listaMET = c.getAllMets();
+	            listaConsult = c.getAllConsultoria();
+        	}
+		]]>
+	</mx:Script>
+	<mx:Button x="584" y="800" label="Imprimir Informe" id="imprimirButton" click="{imprimirClick()}"/>
+	<mx:Button x="501" y="800" label="Cancelar" id="cancelarButton" click="{cancelarClick()}"/>
+	<mx:Canvas id="canvasInforme" width="701" height="750" x="10" y="30">
+		<mx:Text x="100" y="10" id="txtMes" text="Mes: "/>
+		<mx:DataGrid x="0" y="40" width="701" height="710" dataProvider="{listaDias}">
+			<mx:columns>
+				<mx:DataGridColumn headerText="Día" dataField="numDia" id="colDia" width="30"/>
+				<mx:DataGridColumn headerText="" dataField="actividadMet1" id="colMet1"/>
+				<mx:DataGridColumn headerText="" dataField="actividadMet2" id="colMet2"/>
+				<mx:DataGridColumn headerText="" dataField="actividadMet3" id="colMet3"/>
+				<mx:DataGridColumn headerText="" dataField="actividadMet4" id="colMet4"/>
+				<mx:DataGridColumn headerText="" dataField="actividadMet5" id="colMet5"/>
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:Canvas>
+	<mx:LinkButton x="508" y="10" label="Pág. anterior" enabled="false"/>
+	<mx:LinkButton x="611" y="10" label="Pág. siguiente" enabled="false"/>
+	
+</mx:Panel>

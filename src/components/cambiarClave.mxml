@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" title="Cambio de contraseña" layout="absolute" width="242" 
+	height="274" defaultButton="{cambiarButton}"  borderColor="#F49821" borderAlpha="0.7">
+	<mx:Script>
+		<![CDATA[
+			import mx.controls.Alert;
+			import mx.managers.PopUpManager;
+			
+			private function cambiarClick():void{
+				if(MetActivo.contrasena==this.passAntigua.text && this.passNueva1.text==this.passNueva2.text){
+					var c:Conexion = new Conexion;
+					c.updateContrasena(MetActivo.rut, this.passNueva1.text);
+				}
+				else{
+					Alert.show("Error, datos incorrectos!");
+				}
+				
+			}
+			private function cancelarClick():void{
+				PopUpManager.removePopUp(this);
+				
+			}
+		]]>
+	</mx:Script>
+	<mx:Button x="139" y="202" label="Cambiar" id="cambiarButton" click="{cambiarClick()}"/>
+	<mx:Button x="56" y="202" label="Cancelar" id="cancelarButton" click="{cancelarClick()}"/>
+	<mx:Text x="10" y="10" text="Contraseña antigua:"/>
+	<mx:Text x="10" y="66" text="Contraseña nueva:"/>
+	<mx:TextInput x="31" y="36" width="140" id="passAntigua" displayAsPassword="true"/>
+	<mx:TextInput x="31" y="91" displayAsPassword="true" width="140" id="passNueva1"/>
+	<mx:Text x="10" y="121" text="Repetir contraseña nueva:"/>
+	<mx:TextInput x="31" y="146" displayAsPassword="true" width="140" id="passNueva2"/>
+	
+</mx:Panel>

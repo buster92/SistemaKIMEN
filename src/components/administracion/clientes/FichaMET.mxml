@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="729" height="790">
+	<mx:Script>
+		<![CDATA[
+			import mx.graphics.codec.PNGEncoder;
+			import org.alivepdf.images.ImageFormat;
+			import clases.MET;
+			import mx.controls.Alert;		
+			import flash.display.BitmapData;
+			
+			
+			import org.alivepdf.annotations.Annotation;
+			import org.alivepdf.annotations.AnnotationType;
+			import org.alivepdf.annotations.TextAnnotation;
+			import org.alivepdf.colors.CMYKColor;
+			import org.alivepdf.colors.RGBColor;
+			import org.alivepdf.colors.SpotColor;
+			import org.alivepdf.data.Grid;
+			import org.alivepdf.data.GridColumn;
+			import org.alivepdf.events.CharacterEvent;
+			import org.alivepdf.fonts.CodePage;
+			import org.alivepdf.fonts.CoreFont;
+			import org.alivepdf.fonts.EmbeddedFont;
+			import org.alivepdf.fonts.FontFamily;
+			import org.alivepdf.fonts.IFont;
+			import org.alivepdf.images.ColorSpace;
+			import org.alivepdf.layout.Align;
+			import org.alivepdf.layout.Mode;
+			import org.alivepdf.layout.Orientation;
+			import org.alivepdf.layout.Position;
+			import org.alivepdf.layout.Resize;
+			import org.alivepdf.layout.Size;
+			import org.alivepdf.layout.Unit;
+			import org.alivepdf.links.HTTPLink;
+			import org.alivepdf.links.Highlight;
+			import org.alivepdf.links.ILink;
+			import org.alivepdf.links.InternalLink;
+			import org.alivepdf.pages.Page;
+			import org.alivepdf.pdf.PDF;
+			import org.alivepdf.saving.Method;
+            
+            private var file:FileReference;
+            private var b:ByteArray = new ByteArray();
+            
+			public function doPDF():void{
+			
+            	var p:PDF = new PDF( Orientation.PORTRAIT, Unit.MM, Size.LETTER);
+				
+				p.addPage();				
+				//p.addImage( this.fichaCanvas, new Resize ( Mode.FIT_TO_PAGE, Position.CENTERED ) );
+				//p.addImage (fichaCanvas, null , true, ImageFormat.JPG, 100);
+				//p.addImage(this.fichaCanvas);
+				
+				var a:ImageFormat;
+				
+				
+				
+				// Here canvasId is the id of the canvas to save, 3 is the scaling required
+				// if you dont require any scaling just ignore 3
+				var bitmapData:BitmapData = new BitmapData(5*fichaCanvas.width,
+				5*fichaCanvas.height,true,0x00000000);
+				// Again 3 is for scaling we are passing for transformation matrix
+				bitmapData.draw(fichaCanvas,new Matrix(5,0,0,5),null,null,null,true);
+				var bitmap : Bitmap = new Bitmap(bitmapData);
+				var png:PNGEncoder = new PNGEncoder();
+				var ba:ByteArray = png.encode(bitmapData);
+
+				var bitmapFillBuffer:Shape = new Shape();
+				bitmapFillBuffer = new Shape();
+				bitmapFillBuffer.graphics.beginBitmapFill( bitmapData, null );
+				p.addImageStream(ba,ColorSpace.DEVICE_RGB, null, 0, 0, 500, 500, 0, 1, "Normal", null);
+				var archivo:FileReference = new FileReference;
+				archivo.save(p.save(Method.LOCAL), "Ficha Met.pdf");
+				
+				
+				
+				/*
+	            var FileStream = new FileStream();
+		  	    file = File.desktopDirectory.resolvePath("ficha.pdf");
+		  	    f.open( file, FileMode.WRITE);
+		  	    var bytes:ByteArray = p.save( Method.LOCAL );
+		  	    f.writeBytes(bytes);
+		  	    f.close();
+		  	    */
+			}
+			public function setData(met:Object):void{
+				this.rut.text = met.rut;
+				this.nombres.text = met.nombres;
+				this.apellidos.text = met.apellidos;
+				this.direccion_partic.text = met.direccion;
+				this.fono_partic.text = met.fono_particular;
+				this.celular.text = met.fono_cel;
+				this.profesion.text = met.profesion;
+				this.banco.text = met.banco;
+				this.cta_corriente.text = met.cuenta_cte;
+				this.nombre_contacto.text = met.contacto_emerg;
+				this.relacion_contacto.text = met.relacion_emerg;
+				this.direccion_contacto.text = met.direccion_emerg;
+				this.fono_contacto.text = met.fono_emerg;
+				this.grupo_sangre.text = met.grupo_sangre;
+				this.alergias.text = met.alergias;
+				this.email.text = met.email;
+				this.fecha_nacimiento.text = this.formatDate(met.fecha_nacimiento);
+				this.estado_civil.text = met.estado_civil;
+				this.fecha_ingreso.text = this.formatDate(met.fecha_ingreso);
+				this.post_grado.text = met.post_grado;
+				this.isapre.text = met.isapre;
+				this.afp.text = met.afp;
+				this.factor.text = met.factor_rh;
+				this.contraindicaciones.text = met.contraindicaciones;
+				this.problemas_salud.text = met.problemas_salud;
+				this.problemas_legales.text = met.problemas_legales;
+				this.conflicto_intereses.text = met.conflicto_intereses;
+				this.observaciones.text = met.observaciones;
+				this.profesion_casa.text = met.profesion_casa;
+				this.post_grado_casa.text = met.post_grado_casa;
+				
+			}
+			private function volver():void{
+				(this.parent as VerTodosClientes ).showVerTodos();
+			}
+			private function formatDate(date:String):String{
+				
+				var lista:Array = date.split("-");
+				return lista[2]+"/"+lista[1]+"/"+lista[0];
+			}
+		]]>
+	</mx:Script>
+	<mx:Canvas x="39.5" y="10" width="650" height="725" id="fichaCanvas">
+	<mx:Text x="10" y="33" text="Ficha personal" fontSize="16" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="10" y="88" text="Datos Personales:" fontSize="12" fontStyle="italic" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="10" y="116" text="Rut" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="153" y="116" text="Nombres" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="318" y="116" text="Apellidos" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="472" y="116" text="Fecha Nacimiento" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="10" y="172" text="Dirección Particular" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="318" y="172" text="Fono Particular" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="472" y="172" text="Celular" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="10" y="228" text="E-mail" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="318" y="228" text="Fecha Ingreso" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="472" y="228" text="Estado Civil" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="10" y="284" text="Profesión" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="318" y="284" text="Post-Grado" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="10" y="340" text="Cuenta Corriente" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="153" y="340" text="Banco" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="318" y="340" text="Isapre" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="472" y="340" text="AFP" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="318" y="396" text="Problemas Legales" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="10" y="396" text="Conflicto de Intereses" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="316" y="656" text="Observaciones" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Image x="464" y="10" source="logotipo.jpg" height="76" width="176" scaleContent="true"/>
+	<mx:Text x="10" y="493" text="Nombre Contacto" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="153" y="493" text="Relación Contacto" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="10" y="549" text="Fono Contacto" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="318" y="493" text="Dirección" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="10" y="465" text="En Caso de Emergencias:" fontSize="12" fontStyle="italic" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="153" y="284" text="Casa de estudios Profesión" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="472" y="284" text="Casa de estudios Post-Grado" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="153" y="549" text="G. Sangre" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="318" y="598" text="Contraindicaciones" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="316" y="549" text="Factor RH" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="10" y="598" text="Alergias" fontSize="11" fontAntiAliasType="advanced"/>
+	<mx:Text x="10" y="657" text="Problemas de Salud" fontSize="11" fontAntiAliasType="advanced"/>
+	
+	
+	<mx:Text x="10" y="132" text="Rut" id="rut" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="153" y="132" text="Nombres" id="nombres" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="318" y="133" text="Apellidos" id="apellidos" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="472" y="133" text="Fecha Nacimiento" id="fecha_nacimiento" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:TextArea x="10" y="188" text="Dirección Particular" id="direccion_partic" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced" wordWrap="true" editable="false" height="40" borderStyle="none" width="140"/>
+	<mx:Text x="318" y="188" text="Fono Particular" id="fono_partic" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="472" y="188" text="Celular" id="celular" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="10" y="243" text="E-mail" id="email" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="318" y="243" text="Fecha Ingreso" id="fecha_ingreso" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="472" y="243" text="Estado Civil" id="estado_civil" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:TextArea x="10" y="302" text="Profesión" id="profesion" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced" width="140" height="40" borderStyle="none" editable="false" wordWrap="true"/>
+	<mx:TextArea x="153" y="302" text="Profesión_Casa" id="profesion_casa" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced" wordWrap="true" editable="false" height="40" borderStyle="none" width="140"/>
+	<mx:TextArea x="318" y="302" text="Post-Grado" id="post_grado" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced" wordWrap="true" editable="false" height="40" borderStyle="none" width="140"/>
+	<mx:TextArea x="472" y="302" text="Post-Grado_Casa" id="post_grado_casa" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced" wordWrap="true" editable="false" height="40" borderStyle="none" width="140"/>
+	<mx:Text x="10" y="358" text="Cuenta Corriente" id="cta_corriente" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:TextArea x="153" y="358" text="Banco" id="banco" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced" wordWrap="true" editable="false" height="40" borderStyle="none" width="140"/>
+	<mx:TextArea x="318" y="358" text="Isapre" id="isapre" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced" wordWrap="true" editable="false" height="40" borderStyle="none" width="140"/>
+	<mx:Text x="472" y="358" text="AFP" id="afp" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:TextArea x="318" y="414" text="Problemas Legales" id="problemas_legales" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced" wordWrap="true" editable="false" height="40" borderStyle="none" width="259"/>
+	<mx:TextArea x="10" y="414" text="Conflicto de Intereses" id="conflicto_intereses" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced" wordWrap="true" editable="false" height="40" borderStyle="none" width="300"/>
+	<mx:TextArea x="316" y="674" text="Observaciones" id="observaciones" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced" wordWrap="true" editable="false" height="40" borderStyle="none" width="277"/>
+	<mx:Text x="10" y="509" text="Nombre Contacto" id="nombre_contacto" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="153" y="509" text="Relación Contacto" id="relacion_contacto" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="10" y="565" text="Fono Contacto" id="fono_contacto" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="318" y="509" text="Dirección" id="direccion_contacto" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="153" y="566" text="G. Sangre" id="grupo_sangre" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="318" y="615" text="Contraindicaciones" id="contraindicaciones" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="316" y="566" text="Factor RH" id="factor" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:Text x="10" y="615" text="Alergias" id="alergias" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced"/>
+	<mx:TextArea x="10" y="674" text="Problemas de Salud" id="problemas_salud" fontSize="11" fontWeight="bold" fontAntiAliasType="advanced" wordWrap="true" editable="false" height="40" borderStyle="none" width="264"/>
+	
+	
+	
+	
+	</mx:Canvas>
+	<mx:Button x="590.5" y="743" label="Guardar PDF" click="{doPDF()}"/>
+	<mx:Button x="519.5" y="743" label="Volver" click="{volver()}"/>
+	
+</mx:Canvas>

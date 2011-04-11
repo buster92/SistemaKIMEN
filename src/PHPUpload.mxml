@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" 
+	layout="vertical"
+	creationComplete="init();">
+	
+	<mx:Script>
+		<![CDATA[
+			
+			import remoting.events.RemoteExceptionEvent;
+			import remoting.events.RemoteResultEvent;
+			import remoting.services.RemoteFileService;
+			import remoting.vo.FileVO;
+			import mx.controls.Alert;
+			
+			private var amfChannelId:String = "my-amfphp";
+			private var amfGateway:String = "http://www.kimen.cl/amfphp/gateway.php";
+			private var service:RemoteFileService;
+			
+			private var refUploadFile:FileReference;
+			
+			
+			private function init():void {
+				this.addEventListener(RemoteExceptionEvent.REMOTE_EXCEPTION, handleRemoteExceptionEvent);
+				this.addEventListener(RemoteResultEvent.UPLOAD_STATUS, handleRemoteResultEvent);
+				// Create a new service instance
+				service = new RemoteFileService( amfChannelId, amfGateway );
+			}
+			
+			private function reset():void {
+				// Reset UI and filereference
+				fileselected.text = "";
+				refUploadFile = new  FileReference();
+			}
+			
+			private function handleRemoteResultEvent(event:RemoteResultEvent):void {
+				reset();
+				// Show message from the server
+				Alert.show("result: "+event.message);
+			}
+			private function handleRemoteExceptionEvent(event:RemoteExceptionEvent):void {
+				reset();
+			    Alert.show("error: "+event.message);
+            }
+            
+            // Called to add a file for upload 
+            private function browseFile():void { 
+               refUploadFile = new  FileReference(); 
+               refUploadFile.browse(); 
+               refUploadFile.addEventListener(Event.SELECT,onFileSelect); 
+            } 
+            // Called when a file is selected 
+            private function onFileSelect(event:Event):void { 
+               fileselected.text = refUploadFile.name;
+               fileupload.enabled = true;
+               // Load the filereference data
+               refUploadFile.load();
+            } 
+            // Called when upload file is clicked
+            private function uploadFile():void {
+			   var data:ByteArray = new ByteArray(); 
+               var file:FileVO;
+               
+               //Read the bytes into bytearray var
+               refUploadFile.data.readBytes(data, 0, refUploadFile.data.length); 
+               
+               // Create a new FileVO instance
+               file = new FileVO();
+               file.filename = refUploadFile.name;
+               file.filedata = data;
+               
+              service.upload(file,"B");
+               //var c:Conexion  =  new Conexion;
+               //c.uploadFile(file, "ASD");
+			}
+            
+		]]>
+	</mx:Script>
+	
+	<mx:HBox>
+	    <mx:Label text="Your file: "/>
+	    <mx:Text id="fileselected" />
+	    <mx:Button label="Browse a file" click="browseFile();"/>
+	</mx:HBox>
+	<mx:Button id="fileupload" label="Upload" click="{uploadFile()}" enabled="false"/>
+	    
+</mx:Application>

@@ -1,0 +1,83 @@
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="650" height="395" borderStyle="inset" 
+	addedToStage="{showEvent()}" >
+	<mx:Script>
+		<![CDATA[
+			import mx.events.CloseEvent;
+			import clases.MET;
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import flash.utils.Timer;
+			
+			[Bindable]
+			private var listaProductos:ArrayCollection;
+			private var childrens:Array;
+			private var c:Conexion = new Conexion;
+			
+			private function editarClick():void{
+				if(listaGrid.selectedItem!=null){
+					this.childrens = this.getChildren();
+					removeAllChildren();
+					//var object:editarSeleccionado = new editarSeleccionado;
+					//al obtener el objeto no se debe castear!
+					//var met:Object = listaMET.getItemAt(listaGrid.selectedIndex);
+					//Alert.show("grid index: "+listaGrid.selectedIndex+" lista size: "+listaMET.length+" rut met: "+met.rut);
+					//this.addChild(object );
+					//object.cargarMET(met);
+				}
+				else{
+					Alert.show("Error, primero debe seleccionar un elemento!.");
+				}
+			}
+			private function eliminarClick():void{
+				if(listaGrid.selectedItem!=null)
+					Alert.show("¿Desea realmente eliminar el registro?", "Confirmación", Alert.YES|Alert.NO, this, confirmHandler,null, Alert.NO);
+				else{
+					Alert.show("Error, primero debe seleccionar un elemento!.");
+				}
+			}
+			private function confirmHandler(event:CloseEvent):void {
+				if (event.detail == Alert.YES) {
+					var met:Object = listaProductos.getItemAt(listaGrid.selectedIndex);
+					
+					c.deleteMET(met.rut);
+					var minuteTimer:Timer = new Timer(1000, 1);
+					minuteTimer.addEventListener(TimerEvent.TIMER_COMPLETE, onTimerComplete);
+					minuteTimer.start();
+					
+				}
+			}
+			private function onTimerComplete(event:TimerEvent):void{
+            	showEvent();
+        	}
+			public function showVerTodos():void{
+				removeAllChildren();
+				//vuelve a insertar todos los hijos guardados
+				var i:int;
+				for(i=0;i<childrens.length;i++){
+					this.addChild(childrens[i]);
+				}
+				//llama al evento que obtiene todos los mets de la bd
+				showEvent();
+			}
+			
+			private function showEvent():void{
+				var c:Conexion = new Conexion;
+				listaProductos = c.getAllProducto();
+			}
+		]]>
+	</mx:Script>
+	<mx:DataGrid x="10" y="37" width="626" height="292" id="listaGrid" dataProvider="{listaProductos}">
+		<mx:columns>
+			<mx:DataGridColumn headerText="Código" dataField="codigo" width="50"/>
+			<mx:DataGridColumn headerText="Nombre" dataField="nombre" width="100"/>
+			<mx:DataGridColumn headerText="Descripción" dataField="descripcion" width="120"/>
+			<mx:DataGridColumn headerText="Unidad" dataField="unidad" width="70"/>
+			<mx:DataGridColumn headerText="Stock de seguridad" dataField="stock_seguridad" width="80"/>
+		</mx:columns>
+	</mx:DataGrid>
+	<mx:Text x="10" y="10" text="Lista con todos los METs registrados" fontSize="11"/>
+	<mx:Text x="10" y="337" text="(*) Permisos:&#xa;0: Usuario, 1: Gte Capacitación&#xa;2: Coordinador CGI, 3: Gerencia" width="192" height="44"/>
+	<mx:Button x="520" y="335" label="Actualizar tabla" click="{showEvent()}"/>
+	<mx:Button x="427" y="335" label="Editar MET" click="editarClick()"/>
+	<mx:Button x="322" y="335" label="Eliminar MET" click="eliminarClick()"/>
+</mx:Canvas>

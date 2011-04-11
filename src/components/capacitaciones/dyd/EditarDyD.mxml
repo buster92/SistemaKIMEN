@@ -1,0 +1,455 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="755" height="806"
+	 xmlns:ns1="components.*" creationComplete="{init()}">
+<mx:Script>
+	<![CDATA[
+		import clases.capacitaciones.DesarrolloDD;
+		import clases.capacitaciones.DD;
+		import mx.collections.ArrayCollection;
+		import clases.MET;
+		import mx.controls.Alert;
+		
+		[Bindable]
+		private var listaRut:ArrayCollection;
+		[Bindable]
+		private var lista:ArrayCollection;
+		[Bindable]
+		private var listaMET:ArrayCollection;
+		private var c:Conexion;
+		[Bindable]
+		private var currentCodigo:String;
+		[Bindable]
+		private var nextEstado:String = "Actualizar";
+		private var nuevoDesarrolloDD:DesarrolloDD = new DesarrolloDD;
+		private function init():void{
+			c = new Conexion;
+			
+			listaRut = c.getAllMets();
+			MetActivo.componenteActivo =  NuevoDyD;
+			if(MetActivo.permiso=="Gerencia")
+				this.estadoCombo.enabled = true;
+		}
+		private function getMaxDD(tipo:String):void{
+			lista = c.getMaxDD(tipo);
+			var minuteTimer:Timer = new Timer(2000, 1);
+			minuteTimer.addEventListener(TimerEvent.TIMER_COMPLETE, onTimerComplete);
+			minuteTimer.start();
+		}
+			
+		private function onTimerComplete(event:TimerEvent):void{
+			var string:String;
+			if(lista.getItemAt(0).max_codigo !=null){
+				//Alert.show(String(lista.getItemAt(0).max_codigo.toString()).substr(3,4));
+				string = String(lista.getItemAt(0).max_codigo.toString()).substr(3,4);
+				this.codigoTxtInput.text = String(int(string)+1);
+				//relleno con ceros a la izq los numeros de menos de 4 digitos
+				var i:int;
+				for(i=codigoTxtInput.text.length;i<4;i++){
+					codigoTxtInput.text = "0"+codigoTxtInput.text;
+				}
+				
+			}
+			else{
+				this.codigoTxtInput.text = "0001";
+			}
+           	this.currentCodigo = this.codigoCombo.selectedItem.toString()+codigoTxtInput.text;
+       	}
+		
+		//formatea los datefield al formato dd/mm/aaaa
+		private function dateFieldInit(date:DateField):DateField {
+       		date.dayNames=['Dom', 'Lun', 'Mar', 
+       		'Mie', 'Jue', 'Vie', 'Sab'];
+       		date.monthNames=['Enero','Febrero','Marzo','Abril',
+            'Mayo','Junio','Julio','Agosto','Septiembre',
+            'Octubre','Noviembre','Diciembre'];
+            date.selectedDate = (new Date());  	
+            date.firstDayOfWeek = 1;
+            
+            date.formatString="DD/MM/YYYY" ;
+            return date;   
+  		}
+		
+		private function cancelarClick():void{
+			(this.parent as VerTodosDyD).showVerTodos();
+		}
+		private function getCurrentDateFormatted():String{
+			var d:Date = new Date;
+			var s:String = d.getDate()+"/"+(d.getMonth()+1)+"/"+d.getFullYear();
+			return s;
+		}
+		private function registrarClick():void{
+			var fecha:String = getCurrentDateFormatted();
+			
+			var estado:String;
+			nuevoDesarrolloDD.id_dd = this.currentCodigo;
+			switch(this.estadoCombo.selectedItem.toString()){
+				case "En ejecución":
+					responsableTxt5.text = MetActivo.nombres;
+					dateFieldInit(this.fecha5);
+					nuevoDesarrolloDD.fecha0 = fecha;
+					nuevoDesarrolloDD.responsable_rut0 = MetActivo.rut;
+					estado = "En revisión";
+					break;
+				case "En revisión":
+					responsableTxt6.text = MetActivo.nombres;
+					dateFieldInit(this.fecha6);
+					nuevoDesarrolloDD.fecha1 = fecha;
+					nuevoDesarrolloDD.responsable_rut1 = MetActivo.rut;
+					estado = "En verificación";
+					break;
+				case "En verificación":
+					responsableTxt7.text = MetActivo.nombres;
+					dateFieldInit(this.fecha7);
+					nuevoDesarrolloDD.fecha2 = fecha;
+					nuevoDesarrolloDD.responsable_rut2 = MetActivo.rut;
+					estado = "En validación";
+					break;
+				case "En validación":
+					responsableTxt8.text = MetActivo.nombres;
+					dateFieldInit(this.fecha8);
+					nuevoDesarrolloDD.fecha3 = fecha;
+					nuevoDesarrolloDD.responsable_rut3 = MetActivo.rut;
+					estado = "TLEC";
+					break;
+			}
+			nuevoDesarrolloDD.observaciones = this.observacionesTxtArea.text;
+			
+			c.updateDD(this.currentCodigo, this.nombreTxtInput.text, estado);
+			c.updateDesarroDD(nuevoDesarrolloDD);
+			
+			
+		
+		}
+		private function getFormattedDate(date:Date):String{
+			var finalDate:String;
+			finalDate = date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
+			Alert.show("fecha: "+finalDate);
+			return finalDate;
+		}
+		public function cargarDD(dd:Object):void{
+			c = new Conexion;
+			this.listaMET = c.getAllMets();
+			this.codigoCombo.selectedItem = dd.codigo_interno.substr(0,3);
+			this.codigoTxtInput.text = dd.codigo_interno.substr(3,4);
+			this.currentCodigo = dd.codigo_interno;
+			this.fechaDateField.text = dd.fecha;
+			//Alert.show(dd.responsable_rut);
+			c.gateway.call("administracion.getNombreMET", new Responder(onResult, onFault),dd.responsable_rut);
+			this.estadoCombo.selectedItem = dd.estado;
+			this.nombreTxtInput.text = dd.nombre;
+			this.descripcionTxtArea.text = dd.descripcion;
+			this.versionTxtInput.text = dd.version;
+			
+			c.gateway.call("capacitaciones.getPlanificacionDD", new Responder(onGetPlanifDDResult, onVoidResult),dd.codigo_interno);
+			c.gateway.call("capacitaciones.getDesarrolloDD", new Responder(onGetDesarroDDResult, onVoidResult),dd.codigo_interno);
+			
+			switch(this.estadoCombo.selectedItem.toString()){
+				case "En ejecución":
+					this.nextEstado = "Actualizar al estado de \"En revisión\"";
+					break;
+				case "En revisión":
+					this.nextEstado = "Actualizar al estado \"En verificación\"";
+					break;
+				case "En verificación":
+					this.nextEstado = "Actualizar al estado \"En validación\"";
+					break;
+				case "En validación":
+					this.nextEstado = "Actualizar al estado \"TLEC\"";
+					this.nombreTxtInput.enabled = false;
+					break;
+			}
+			
+			if(dd.estado=="TLEC"){
+				this.nombreTxtInput.enabled = false;
+				this.registrarButton.enabled = false;
+				this.registrarButton.label = "Actualizar";
+			}
+		}
+		public function onGetPlanifDDResult(result : Array):void{
+			this.responsableTxt0.text = getNombreByRut(result[0].responsable_rut0);
+			this.responsableTxt1.text = getNombreByRut(result[0].responsable_rut1);
+			this.responsableTxt2.text = getNombreByRut(result[0].responsable_rut2);
+			this.responsableTxt3.text = getNombreByRut(result[0].responsable_rut3);
+			this.responsableTxt4.text = getNombreByRut(result[0].responsable_rut4);
+			this.fecha0.text = result[0].fecha0;
+			this.fecha1.text = result[0].fecha1;
+			this.fecha2.text = result[0].fecha2;
+			this.fecha3.text = result[0].fecha3;
+			this.fecha4.text = result[0].fecha4;
+		}
+		public function onGetDesarroDDResult(result : Array):void{
+			nuevoDesarrolloDD = new DesarrolloDD;
+			nuevoDesarrolloDD.fecha0 = result[0].fecha0;
+			nuevoDesarrolloDD.fecha1 = result[0].fecha1;
+			nuevoDesarrolloDD.fecha2 = result[0].fecha2;
+			nuevoDesarrolloDD.fecha3 = result[0].fecha3;
+			nuevoDesarrolloDD.fecha4 = result[0].fecha4;
+			nuevoDesarrolloDD.responsable_rut0 = result[0].responsable_rut0;
+			nuevoDesarrolloDD.responsable_rut1 = result[0].responsable_rut1;
+			nuevoDesarrolloDD.responsable_rut2 = result[0].responsable_rut2;
+			nuevoDesarrolloDD.responsable_rut3 = result[0].responsable_rut3;
+			nuevoDesarrolloDD.responsable_rut4 = result[0].responsable_rut4;
+			nuevoDesarrolloDD.id_dd = result[0].id_dd;
+			this.responsableTxt5.text = getNombreByRut(result[0].responsable_rut0);
+			this.responsableTxt6.text = getNombreByRut(result[0].responsable_rut1);
+			this.responsableTxt7.text = getNombreByRut(result[0].responsable_rut2);
+			this.responsableTxt8.text = getNombreByRut(result[0].responsable_rut3);
+			this.responsableTxt9.text = getNombreByRut(result[0].responsable_rut4);
+			this.fecha5.text = result[0].fecha0;
+			this.fecha6.text = result[0].fecha1;
+			this.fecha7.text = result[0].fecha2;
+			this.fecha8.text = result[0].fecha3;
+			this.fecha9.text = result[0].fecha4;
+			this.observacionesTxtArea.text = result[0].observaciones;
+		}
+		
+		
+		public function onResult(result : Array):void{
+			this.responsableTxtInput.text = result[0].nombres;
+		}
+		public function onFault(fault : Object ):void{
+			Alert.show("Fallo en la conexión a Internet");
+		}
+		public function onVoidResult(result : Array):void{
+			nuevoDesarrolloDD = new DesarrolloDD;
+		}
+		public function getNombreByRut(rut:String):String{
+			var i:int;
+			for(i=0;i<listaMET.length;i++){
+				if(listaMET.getItemAt(i).rut==rut)
+					return listaMET.getItemAt(i).nombres;
+			}
+			return "-";
+		}
+		private function descargarClick():void{
+			var request:URLRequest = new URLRequest(); 
+			request.url = "http://www.kimen.cl/amfphp/services/uploads/dyd/archivos_"+this.currentCodigo+".rar";
+                
+            var fr:FileReference = new FileReference; 
+            fr.addEventListener(ProgressEvent.PROGRESS, progressHandler);  
+            fr.addEventListener(Event.COMPLETE, completeHandler);  
+            fr.download(request); 
+                
+		}
+		private function progressHandler(event:ProgressEvent):void {  
+            progressBar.setProgress(event.bytesLoaded, event.bytesTotal);
+            var porcentaje:Number = (Math.round((event.bytesLoaded/event.bytesTotal) * 100) );
+            progressBar.label = "Descargando " +porcentaje + "%";  
+       	}
+		private function completeHandler(event:Event):void {  
+	    	progressBar.label = "Descarga completa" 
+	  
+        }  
+        private function changeEstadoCombo():void{
+        	switch(this.estadoCombo.selectedItem.toString()){
+				case "En ejecución":
+					this.nextEstado = "Actualizar al estado de \"En revisión\"";
+					break;
+				case "En revisión":
+					this.nextEstado = "Actualizar al estado \"En verificación\"";
+					break;
+				case "En verificación":
+					this.nextEstado = "Actualizar al estado \"En validación\"";
+					break;
+				case "En validación":
+					this.nextEstado = "Actualizar al estado \"TLEC\"";
+					this.nombreTxtInput.enabled = false;
+					break;
+			}
+        }
+	]]>
+</mx:Script>
+	<mx:Text x="10" y="10" text="Edición de un Diseño y Desarrollo" fontSize="11"/>
+	<mx:Canvas x="10" y="37" width="735" height="729" borderStyle="inset">
+		<mx:ComboBox x="419" y="36" width="75" id="codigoCombo"
+			 change="{this.getMaxDD(codigoCombo.selectedItem.toString())}" enabled="false">
+			<mx:dataProvider>
+				<mx:Array id="listaPermisos0">
+					<mx:String>ADM</mx:String>
+			    	<mx:String>DPO</mx:String>
+					<mx:String>ISG</mx:String>
+					<mx:String>RNA</mx:String>
+					<mx:String>OTR</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:Text x="123" y="10" text="Datos Generales" fontWeight="bold"/>
+		<mx:Text x="123" y="272" text="Planificación" fontWeight="bold"/>
+		<mx:Text x="359" y="38" text="Código:"/>
+		<mx:Text x="101" y="68" text="Fecha:"/>
+		<mx:Text x="359" y="68" text="Estado:"/>
+		<mx:Text x="101" y="98" text="Responsable:"/>
+		<mx:Text x="101" y="128" text="Descripción:"/>
+		<mx:Text x="101" y="38" text="Nombre:"/>
+		<mx:Text x="504" y="38" text="-"/>
+		<mx:TextInput x="524" y="36" width="75" id="codigoTxtInput" enabled="false"/>
+		<mx:TextInput x="191" y="96" width="160" id="responsableTxtInput" enabled="false"/>
+		<mx:Text x="359" y="98" text="Versión:"/>
+		<mx:TextInput x="418" y="96" width="181" id="versionTxtInput" enabled="false"/>
+		<mx:ComboBox x="419" y="66" width="180" id="estadoCombo" enabled="false" change="{changeEstadoCombo()}">
+			<mx:dataProvider>
+				<mx:Array >
+					<mx:String>En ejecución</mx:String>
+			    	<mx:String>En revisión</mx:String>
+					<mx:String>En verificación</mx:String>
+					<mx:String>En validación</mx:String>
+					<mx:String>TLEC</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:DateField x="191" y="66" width="157" id="fechaDateField" enabled="false"/>
+		<mx:TextInput x="191" y="36" id="nombreTxtInput"/>
+		<mx:TextArea x="191" y="126" id="descripcionTxtArea" borderStyle="inset" wordWrap="true" height="69" width="408" enabled="false"/>
+		<mx:Grid x="101" y="298" width="498" horizontalGap="10" verticalGap="5">
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:Text text="Descripción" fontSize="10" fontWeight="bold"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:Text text="Responsable" fontSize="10" fontWeight="bold"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:Text text="Plazo" fontSize="10" fontWeight="bold"/>
+				</mx:GridItem>
+			</mx:GridRow>
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%">
+					<mx:Text text="Ejecución del Diseño y Desarrollo" fontSize="10"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:TextInput width="130" enabled="false" id="responsableTxt0"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:DateField id="fecha0" width="100" enabled="false"/>
+				</mx:GridItem>
+			</mx:GridRow>
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%">
+					<mx:Text text="Revisión del Diseño y Desarrollo" fontSize="10"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:TextInput width="130" enabled="false" id="responsableTxt1"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:DateField id="fecha1" width="100" enabled="false"/>
+				</mx:GridItem>
+			</mx:GridRow>
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%">
+					<mx:Text text="Verificación del Diseño y Desarrollo" fontSize="10"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:TextInput width="130" enabled="false" id="responsableTxt2"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:DateField id="fecha2" width="100" enabled="false"/>
+				</mx:GridItem>
+			</mx:GridRow>
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%">
+					<mx:Text text="Validación del Diseño y Desarrollo" fontSize="10"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:TextInput width="130" enabled="false" id="responsableTxt3"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:DateField id="fecha3" width="100" enabled="false"/>
+				</mx:GridItem>
+			</mx:GridRow>
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%">
+					<mx:Text text="Inscripción SENCE" fontSize="10"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:TextInput width="130" enabled="false" id="responsableTxt4"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:DateField id="fecha4" width="100" enabled="false"/>
+				</mx:GridItem>
+			</mx:GridRow>
+		</mx:Grid>
+		<mx:Text x="123" y="459" text="Desarrollo" fontWeight="bold"/>
+		<mx:Text x="101" y="646" text="Observaciones:"/>
+		<mx:Grid x="101" y="485" width="498" horizontalGap="10" verticalGap="5">
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:Text text="Descripción" fontSize="10" fontWeight="bold"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:Text text="Responsable" fontSize="10" fontWeight="bold"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:Text text="Fecha ejecución" fontSize="10" fontWeight="bold"/>
+				</mx:GridItem>
+			</mx:GridRow>
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%">
+					<mx:Text text="Ejecución del Diseño y Desarrollo" fontSize="10"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:TextInput width="130" enabled="false" id="responsableTxt5"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:DateField id="fecha5" width="100" enabled="false"/>
+				</mx:GridItem>
+			</mx:GridRow>
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%">
+					<mx:Text text="Revisión del Diseño y Desarrollo" fontSize="10"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:TextInput width="130" enabled="false" id="responsableTxt6"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:DateField id="fecha6" width="100" enabled="false"/>
+				</mx:GridItem>
+			</mx:GridRow>
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%">
+					<mx:Text text="Verificación del Diseño y Desarrollo" fontSize="10"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:TextInput width="130" enabled="false" id="responsableTxt7"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:DateField id="fecha7" width="100" enabled="false"/>
+				</mx:GridItem>
+			</mx:GridRow>
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%">
+					<mx:Text text="Validación del Diseño y Desarrollo" fontSize="10"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:TextInput width="130" enabled="false" id="responsableTxt8"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:DateField id="fecha8" width="100" enabled="false"/>
+				</mx:GridItem>
+			</mx:GridRow>
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%">
+					<mx:Text text="Inscripción SENCE" fontSize="10"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:TextInput width="130" enabled="false" id="responsableTxt9"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:DateField id="fecha9" width="100" enabled="false"/>
+				</mx:GridItem>
+			</mx:GridRow>
+		</mx:Grid>
+		<ns1:SubirArchivo x="101" y="203" 
+			filename="{this.currentCodigo}" 
+			folder="dyd" errorMessage="Error, debe ingresar el código correctamente">
+		</ns1:SubirArchivo>
+		<mx:TextArea x="200" y="646" id="observacionesTxtArea" borderStyle="inset" wordWrap="true" height="69" width="399"/>
+		<mx:Button x="510" y="203" label="Descargar" width="89" click="{descargarClick()}"/>
+		<mx:ProgressBar x="510" y="233" width="89" id="progressBar" mode="manual" label="Descarga 0%"/>
+		
+	</mx:Canvas>
+	<mx:HBox x="311" y="774" width="432" horizontalAlign="right" height="22">
+		<mx:Button label="Cancelar" click="{cancelarClick()}"/>
+		<mx:Button label="{this.nextEstado}" id="registrarButton" click="{registrarClick()}"/>
+	</mx:HBox>
+	
+</mx:Canvas>

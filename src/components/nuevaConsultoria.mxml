@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" title="Nueva Consultoría" layout="absolute" width="244" 
+	height="336" defaultButton="{guardarButton}" creationComplete="creationCompleteHandler()"
+	borderColor="#F49821" borderAlpha="0.7">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			
+			[Bindable]
+			private var array:Array = new Array;
+			private var listaMET:ArrayCollection = new ArrayCollection;
+			
+			private function creationCompleteHandler():void{
+				this.dateFieldInit(this.fecha);
+				var c:Conexion = new Conexion;
+	            listaMET = c.getAllMets();
+	            listaMET = c.listaMET;
+	            
+			}
+			public function addMets(lista:ArrayCollection):void{
+				this.listaMET = lista;
+	            var i:int;
+	            array = new Array;
+	            for(i=0;i<lista.length;i++){
+	            	var s:String;
+	            	s = lista.getItemAt(i).nombres
+	            	array.push(s);
+	            }
+			}
+			private function dateFieldInit(date:DateField):void {
+                date.dayNames=['Dom', 'Lun', 'Mar', 
+                    'Mie', 'Jue', 'Vie', 'Sab'];
+                date.monthNames=['Enero','Febrero','Marzo','Abril',
+                	'Mayo','Junio','Julio','Agosto','Septiembre',
+                	'Octubre','Noviembre','Diciembre'];
+                	
+                date.firstDayOfWeek = 1;
+                date.selectedDate = (new Date());
+                date.formatString="DD/MM/YYYY" ;
+               
+            }
+            public function getSelectedMet():String{
+            	return this.listaMET.getItemAt(this.metCombo.selectedIndex).rut;
+            }
+		]]>
+	</mx:Script>
+	<mx:Button x="142" y="264" label="Guardar" id="guardarButton" />
+	<mx:Button x="59" y="264" label="Cancelar" id="cancelarButton"/>
+	<mx:Text x="10" y="10" text="MET asociado:"/>
+	<mx:Text x="10" y="66" text="Fecha:"/>
+	<mx:Text x="10" y="122" text="Jornada"/>
+	<mx:ComboBox x="10" y="36" id="metCombo" dataProvider="{array}"></mx:ComboBox>
+	<mx:DateField x="10" y="92" width="120" formatString="DD/MM/YYYY" id="fecha"/>
+	<mx:ComboBox x="10" y="148" width="120" id="jornadaCombo">
+		<mx:dataProvider>
+        	<mx:Array id="listaJornadas">
+               	<mx:String>Mañana</mx:String>
+            	<mx:String>Tarde</mx:String>
+           	</mx:Array>
+    	</mx:dataProvider>
+	</mx:ComboBox>
+	<mx:Text x="10" y="178" text="Actividad"/>
+	<mx:TextInput x="10" y="204" width="120" maxChars="20" id="actividad"/>
+	
+</mx:Panel>

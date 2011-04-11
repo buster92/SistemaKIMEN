@@ -1,0 +1,749 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="755" height="810"
+	 xmlns:ns1="components.*" creationComplete="{init()}" xmlns:ns2="com.hillelcoren.components.*">
+	 <mx:Script>
+		<![CDATA[
+			import clases.capacitaciones.Alumno;
+			import mx.events.DataGridEvent;
+			import mx.events.ListEvent;
+			import mx.controls.Alert;
+			import mx.managers.PopUpManager;
+			import mx.collections.ArrayCollection;
+			[Bindable]
+			private var nextEstado:String ;
+			[Bindable]
+			private var listaMET:ArrayCollection;
+			[Bindable]
+			private var listaAlumnos:ArrayCollection;
+			[Bindable]
+			private var listaAux:ArrayCollection;
+			[Bindable]
+			private var registrarButtonLabel:String="Actualizar";
+			[Bindable]
+			private var numeroAlumnos:int;
+			//lista para guardar los alumnos a borrar cuando se guarde
+			[Bindable]
+			private var listaBorrarCursos:ArrayCollection;
+			private var currentCodigo:String;
+			private var c:Conexion;
+			private var agregarAlumno:AgregarAlumno;
+			private function init():void{
+				listaBorrarCursos = new ArrayCollection();
+				c = new Conexion;
+				this.numeroAlumnos = listaAlumnos.length;
+				this.listaAux = c.getAllAlumno();
+				if(MetActivo.permiso=="Gerencia")
+				{
+					this.estadoCombo.enabled=true;
+				}
+			}
+			public function cargarCurso(curso:Object, listaMET:ArrayCollection):void{
+				
+				this.estadoCombo.selectedItem = curso.estado;
+				this.listaMET = listaMET;
+				var codigo:String = curso.codigo_interno;
+				this.codigoCombo.selectedItem = codigo.substr(0,7);
+				this.codigoTxtInput.text = codigo.substr(7,2);
+				
+				this.currentCodigo = codigo;
+				
+				this.nombreTxtInput.text = curso.nombre;
+				this.numparticipantesTxtInput.text = curso.num_participantes;
+				this.fechaEjecucion.text = curso.fecha_ejecucion;
+				this.fechaTermino.text = curso.fecha_termino;
+				this.lugarTxtInput.text = curso.lugar;
+				this.direccionTxtInput.text = curso.direccion;
+				this.horaMananaCombo.selectedItem = curso.horario_manana_ini;
+				this.horaMananaCombo0.selectedItem = curso.horario_manana_fin;
+				this.horaTardeCombo.selectedItem = curso.horario_tarde_ini;
+				this.horaTardeCombo0.selectedItem = curso.horario_tarde_fin;
+				
+				var i:int;
+				for(i=1;i<this.listaMET.length;i++){
+					var rut1:String = this.listaMET.getItemAt(i).rut;
+					var rut2:String = curso.relator_rut;
+					var nombre:String = this.listaMET.getItemAt(i).nombres;
+					
+					if(rut1 == rut2){
+						this.relatorCombo.selectedIndex = i;
+						this.relatorRutTxtInput.text = rut2;
+					}
+				}
+				
+				this.observacionesTxtArea.text = curso.observaciones;
+				this.notaminCombo.text = curso.nota_minima;
+				this.asistenciaminCombo.text = curso.asistencia_minima;
+				switch(this.estadoCombo.selectedItem.toString()){
+					case "En inscripción":
+						this.nextEstado = "En ejecución";
+						this.registrarButtonLabel = "Actualizar al estado \"En ejecución\"";
+						
+						this.fechaEjecucion.enabled=true;
+						this.fechaTermino.enabled=true;
+						this.numparticipantesTxtInput.enabled=true;
+						this.direccionTxtInput.enabled=true;
+						this.lugarTxtInput.enabled=true;
+						this.notaminCombo.enabled=true;
+						this.asistenciaminCombo.enabled=true;
+						this.relatorCombo.enabled=true;
+						this.horaMananaCombo.enabled=true;
+						this.horaMananaCombo0.enabled=true;
+						this.horaTardeCombo.enabled=true;
+						this.horaTardeCombo0.enabled=true;
+						
+						break;
+					case "En ejecución":
+						this.nextEstado = "En cierre";
+						this.registrarButtonLabel = "Actualizar al estado \"En cierre\"";
+						
+						break;
+					case "En cierre":
+						this.nextEstado = "Cerrado";
+						this.registrarButtonLabel =  "Actualizar al estado \"Cerrado\"";
+						this.agregarButton.enabled = false;
+						this.notaColum.editable = true;
+						this.asistenciaColum.editable = true;
+						break;
+					case "Cerrado":
+						this.nextEstado = "Cerrado";
+						this.registrarButtonLabel = "Cerrado";
+						this.registrarButton.enabled = false;
+						this.guardarButton.enabled = false;
+						this.agregarButton.enabled = false;
+						this.nombreTxtInput.enabled = false;
+						this.observacionesTxtArea.enabled = false;
+						
+						break;
+				}
+				c = new Conexion;
+				if(MetActivo.permiso=="Gerencia")
+					this.estadoCombo.enabled = true;
+				this.listaAlumnos = new ArrayCollection;
+				this.listaAlumnos = c.getAllAlumnosCurso(this.currentCodigo);
+			}
+			private function registrarClick():void{
+					c.updateEstadoCurso(this.currentCodigo,this.nextEstado,this.nombreTxtInput.text,
+					this.observacionesTxtArea.text);
+			}
+			private function itemEditEnd(event:DataGridEvent):void{
+				var myEditor:TextInput = 
+                    TextInput(event.currentTarget.itemEditorInstance);
+                
+                var newVal:String = myEditor.text;
+				
+				if(event.columnIndex==3){// asistencia
+					listaAlumnos.getItemAt(event.rowIndex).porc_asistencia = newVal;
+				}
+				if(event.columnIndex==4){// nota
+					listaAlumnos.getItemAt(event.rowIndex).nota = newVal;
+				}
+			}
+			private function guardarClick():void{
+				var i:int;
+				for(i=0;i<this.listaBorrarCursos.length;i++)
+				{
+					c.deleteAlumnoCurso(this.listaBorrarCursos.getItemAt(i).rut_alumno,this.currentCodigo);
+				}
+				this.listaBorrarCursos = new ArrayCollection();
+				for(i=0;i<this.listaAlumnos.length;i++)
+				{	
+					var a:Alumno = new Alumno();
+					a.apellidos = this.listaAlumnos.getItemAt(i).apellidos;
+					a.nombres = this.listaAlumnos.getItemAt(i).nombres;
+					a.nota = this.listaAlumnos.getItemAt(i).nota;
+					a.porc_asistencia = this.listaAlumnos.getItemAt(i).porc_asistencia;
+					a.rut = this.listaAlumnos.getItemAt(i).rut;
+					
+					c.insertAlumnoCurso(a.rut, this.currentCodigo,a.nombres, a.apellidos, a.porc_asistencia, a.nota);
+					//c.updateAlumnoSinMensaje(a);
+				}
+				Alert.show(this.currentCodigo+"  "+this.nombreTxtInput.text+"  "+this.observacionesTxtArea.text);
+				c.updateCurso(this.currentCodigo, this.nombreTxtInput.text, this.observacionesTxtArea.text);
+			}
+			private function cancelarClick():void{
+				(this.parent as VerTodosCursos).showVerTodos();
+			}
+			
+			private function agregarAlumnoClick():void{
+				agregarAlumno = new AgregarAlumno();
+				PopUpManager.addPopUp(agregarAlumno, MetActivo.parent, true);
+                PopUpManager.centerPopUp(agregarAlumno);
+                agregarAlumno.onShow();
+                //asigna todos los alumnos existentes al popup
+                agregarAlumno.setListaAlumnos(this.listaAux);
+                //agrega eventos
+                agregarAlumno.agregarButton.addEventListener(MouseEvent.CLICK, popUpAgregar);
+                agregarAlumno.listaGrid.addEventListener(MouseEvent.DOUBLE_CLICK, popUpAgregar);
+            	agregarAlumno.cancelarButton.addEventListener(MouseEvent.CLICK, popUpCancelar);
+            	//borra los alumnos del popup que  ya estan en el curso
+            	agregarAlumno.deleteAlumnos(listaAlumnos);
+			}
+			private function popUpAgregar(evt:MouseEvent):void {
+				
+				var i:int;
+				var indiceStop:int=-1;;
+				var listaIndices:Array = agregarAlumno.listaGrid.selectedIndices;
+				for(i=0;i<listaIndices.length;i++){
+					
+					if(listaAlumnos.length <new Number(this.numparticipantesTxtInput.text)){
+						listaAlumnos.addItem(agregarAlumno.listaAlumnos.getItemAt(listaIndices[i]));
+						indiceStop=i;
+					}
+					else{
+						Alert.show("Error al agregar Alumnos: ya llegó al límite de participantes");	
+						indiceStop=i;
+						i=listaIndices.length;
+					}
+				}
+	            for(i=0;i<listaIndices.length && i<=indiceStop;i++){
+					agregarAlumno.listaAlumnos.removeItemAt(listaIndices[i]);
+				} 
+	        }
+	       	private function popUpCancelar(evt:MouseEvent):void {
+	                PopUpManager.removePopUp(agregarAlumno);
+	                agregarAlumno.autoComplete.text="";
+	                agregarAlumno.autoComplete.search();
+	        }
+	        private function changeEstadoCombo():void{
+        		switch(this.estadoCombo.selectedItem.toString()){
+					case "En inscripción":
+						this.nextEstado = "En inscripción";
+						this.registrarButtonLabel = "Actualizar al estado \"En inscripción\"";
+						this.registrarButton.enabled=true;
+						this.guardarButton.enabled=true;
+						this.agregarButton.enabled=true;
+						this.notaColum.editable = false;
+						this.asistenciaColum.editable=false;
+						
+						this.fechaEjecucion.enabled=true;
+						this.fechaTermino.enabled=true;
+						this.numparticipantesTxtInput.enabled=true;
+						this.direccionTxtInput.enabled=true;
+						this.lugarTxtInput.enabled=true;
+						this.notaminCombo.enabled=true;
+						this.asistenciaminCombo.enabled=true;
+						this.relatorCombo.enabled=true;
+						this.horaMananaCombo.enabled=true;
+						this.horaMananaCombo0.enabled=true;
+						this.horaTardeCombo.enabled=true;
+						this.horaTardeCombo0.enabled=true;
+						
+						break;
+					case "En ejecución":
+						this.nextEstado = "En ejecución";
+						this.registrarButtonLabel = "Actualizar al estado \"En ejecución\"";
+						this.registrarButton.enabled=true;
+						this.guardarButton.enabled=true;
+						this.agregarButton.enabled=true;
+						this.notaColum.editable = false;
+						this.asistenciaColum.editable=false;
+						
+						this.fechaEjecucion.enabled=false;
+						this.fechaTermino.enabled=false;
+						this.numparticipantesTxtInput.enabled=false;
+						this.direccionTxtInput.enabled=false;
+						this.lugarTxtInput.enabled=false;
+						this.notaminCombo.enabled=false;
+						this.asistenciaminCombo.enabled=false;
+						this.relatorCombo.enabled=false;
+						this.horaMananaCombo.enabled=false;
+						this.horaMananaCombo0.enabled=false;
+						this.horaTardeCombo.enabled=false;
+						this.horaTardeCombo0.enabled=false;
+						
+						break;
+					case "En cierre":
+						this.nextEstado = "En cierre";
+						this.registrarButtonLabel =  "Actualizar al estado \"En cierre\"";
+						this.registrarButton.enabled=true;
+						this.guardarButton.enabled=true;
+						this.agregarButton.enabled = false;
+						this.notaColum.editable = true;
+						this.asistenciaColum.editable = true;
+						
+						this.fechaEjecucion.enabled=false;
+						this.fechaTermino.enabled=false;
+						this.numparticipantesTxtInput.enabled=false;
+						this.direccionTxtInput.enabled=false;
+						this.lugarTxtInput.enabled=false;
+						this.notaminCombo.enabled=false;
+						this.asistenciaminCombo.enabled=false;
+						this.relatorCombo.enabled=false;
+						this.horaMananaCombo.enabled=false;
+						this.horaMananaCombo0.enabled=false;
+						this.horaTardeCombo.enabled=false;
+						this.horaTardeCombo0.enabled=false;
+						
+						break;
+					case "Cerrado":
+						this.nextEstado = "Cerrado";
+						this.registrarButtonLabel = "Cerrado";
+						this.registrarButton.enabled = false;
+						this.guardarButton.enabled = false;
+						this.agregarButton.enabled = false;
+						this.nombreTxtInput.enabled = false;
+						this.observacionesTxtArea.enabled = false;
+						
+						this.fechaEjecucion.enabled=false;
+						this.fechaTermino.enabled=false;
+						this.numparticipantesTxtInput.enabled=false;
+						this.direccionTxtInput.enabled=false;
+						this.lugarTxtInput.enabled=false;
+						this.notaminCombo.enabled=false;
+						this.asistenciaminCombo.enabled=false;
+						this.relatorCombo.enabled=false;
+						this.horaMananaCombo.enabled=false;
+						this.horaMananaCombo0.enabled=false;
+						this.horaTardeCombo.enabled=false;
+						this.horaTardeCombo0.enabled=false;
+						
+						break;
+				}
+			}
+			private function tablaDobleClick():void
+			{
+				this.agregarAlumno.listaAlumnos.addItem(this.listaAlumnos.getItemAt(this.listaGrid.selectedIndex));	
+				this.listaAlumnos.removeItemAt(this.listaGrid.selectedIndex);
+			}
+			private function tablaKeyUp(event:KeyboardEvent):void 
+			{
+				//46 = tecla supr
+				if (event.keyCode ==46)
+				{
+					
+					var indices:Array = this.listaGrid.selectedIndices;
+					var i:int;
+					for(i=0 ;i<indices.length;i++)
+					{
+						listaBorrarCursos.addItem(this.listaAlumnos.getItemAt(indices[i]));
+						if(agregarAlumno!=null)
+							this.agregarAlumno.listaAlumnos.addItem(this.listaAlumnos.getItemAt(indices[i]));	
+						this.listaAlumnos.removeItemAt(indices[i]);
+					}
+					
+				}
+			}
+				
+		]]>
+	</mx:Script>
+		 
+	<mx:Text x="10" y="10" text="Edición de un Curso" fontSize="11"/>
+	<mx:Canvas x="10" y="37" width="735" height="732" borderStyle="inset">
+		<mx:ComboBox x="488.5" y="36" width="125" id="codigoCombo"  enabled="false"/>
+		<mx:ComboBox x="488.5" y="156" width="160" id="asistenciaminCombo" enabled="false">
+			<mx:dataProvider>
+				<mx:Array>
+					<mx:String>0 %</mx:String>
+					<mx:String>5 %</mx:String>
+					<mx:String>10 %</mx:String>
+					<mx:String>15 %</mx:String>
+					<mx:String>20 %</mx:String>
+					<mx:String>25 %</mx:String>
+					<mx:String>30 %</mx:String>
+					<mx:String>35 %</mx:String>
+					<mx:String>40 %</mx:String>
+					<mx:String>45 %</mx:String>
+					<mx:String>50 %</mx:String>
+					<mx:String>55 %</mx:String>
+					<mx:String>60 %</mx:String>
+					<mx:String>65 %</mx:String>
+					<mx:String>70 %</mx:String>
+					<mx:String>75 %</mx:String>
+					<mx:String>80 %</mx:String>
+					<mx:String>85 %</mx:String>
+					<mx:String>90 %</mx:String>
+					<mx:String>95 %</mx:String>
+					<mx:String>100 %</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="205.5" y="284" width="71" id="horaMananaCombo" enabled="false">
+			<mx:dataProvider>
+				<mx:Array >
+					<mx:String>7:15</mx:String>
+				   	<mx:String>7:30</mx:String>
+				   	<mx:String>7:45</mx:String>
+				   	<mx:String>8:00</mx:String>
+				   	<mx:String>8:15</mx:String>
+				   	<mx:String>8:30</mx:String>
+				   	<mx:String>8:45</mx:String>
+				   	<mx:String>9:00</mx:String>
+				   	<mx:String>9:15</mx:String>
+				   	<mx:String>9:30</mx:String>
+				   	<mx:String>9:45</mx:String>
+				   	<mx:String>10:00</mx:String>
+				   	<mx:String>10:15</mx:String>
+				   	<mx:String>10:30</mx:String>
+				   	<mx:String>10:45</mx:String>
+				   	<mx:String>11:00</mx:String>
+				   	<mx:String>11:15</mx:String>
+				   	<mx:String>11:30</mx:String>
+				   	<mx:String>11:45</mx:String>
+				   	<mx:String>12:00</mx:String>
+				   	<mx:String>12:15</mx:String>
+				   	<mx:String>12:30</mx:String>
+				   	<mx:String>12:45</mx:String>
+				   	<mx:String>13:00</mx:String>
+				   	<mx:String>13:15</mx:String>
+				   	<mx:String>13:30</mx:String>
+				   	<mx:String>13:45</mx:String>
+				   	<mx:String>14:00</mx:String>
+				   	<mx:String>14:15</mx:String>
+				   	<mx:String>14:30</mx:String>
+				   	<mx:String>14:45</mx:String>
+				   	<mx:String>15:00</mx:String>
+				   	<mx:String>15:15</mx:String>
+				   	<mx:String>15:30</mx:String>
+				   	<mx:String>15:45</mx:String>
+				   	<mx:String>16:00</mx:String>
+				   	<mx:String>16:15</mx:String>
+				   	<mx:String>16:30</mx:String>
+				   	<mx:String>16:45</mx:String>
+				   	<mx:String>17:00</mx:String>
+				   	<mx:String>17:15</mx:String>
+				   	<mx:String>17:30</mx:String>
+				   	<mx:String>17:45</mx:String>
+				   	<mx:String>18:00</mx:String>
+				   	<mx:String>18:15</mx:String>
+				   	<mx:String>18:30</mx:String>
+				   	<mx:String>18:45</mx:String>
+				   	<mx:String>19:00</mx:String>
+				   	<mx:String>19:15</mx:String>
+				   	<mx:String>19:30</mx:String>
+				   	<mx:String>19:45</mx:String>
+				   	<mx:String>20:00</mx:String>
+				   	<mx:String>20:15</mx:String>
+				   	<mx:String>20:30</mx:String>
+				   	<mx:String>20:45</mx:String>
+				   	<mx:String>21:00</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="294.5" y="284" width="71" id="horaMananaCombo0" enabled="false">
+			<mx:dataProvider>
+				<mx:Array >
+					<mx:String>7:15</mx:String>
+				   	<mx:String>7:30</mx:String>
+				   	<mx:String>7:45</mx:String>
+				   	<mx:String>8:00</mx:String>
+				   	<mx:String>8:15</mx:String>
+				   	<mx:String>8:30</mx:String>
+				   	<mx:String>8:45</mx:String>
+				   	<mx:String>9:00</mx:String>
+				   	<mx:String>9:15</mx:String>
+				   	<mx:String>9:30</mx:String>
+				   	<mx:String>9:45</mx:String>
+				   	<mx:String>10:00</mx:String>
+				   	<mx:String>10:15</mx:String>
+				   	<mx:String>10:30</mx:String>
+				   	<mx:String>10:45</mx:String>
+				   	<mx:String>11:00</mx:String>
+				   	<mx:String>11:15</mx:String>
+				   	<mx:String>11:30</mx:String>
+				   	<mx:String>11:45</mx:String>
+				   	<mx:String>12:00</mx:String>
+				   	<mx:String>12:15</mx:String>
+				   	<mx:String>12:30</mx:String>
+				   	<mx:String>12:45</mx:String>
+				   	<mx:String>13:00</mx:String>
+				   	<mx:String>13:15</mx:String>
+				   	<mx:String>13:30</mx:String>
+				   	<mx:String>13:45</mx:String>
+				   	<mx:String>14:00</mx:String>
+				   	<mx:String>14:15</mx:String>
+				   	<mx:String>14:30</mx:String>
+				   	<mx:String>14:45</mx:String>
+				   	<mx:String>15:00</mx:String>
+				   	<mx:String>15:15</mx:String>
+				   	<mx:String>15:30</mx:String>
+				   	<mx:String>15:45</mx:String>
+				   	<mx:String>16:00</mx:String>
+				   	<mx:String>16:15</mx:String>
+				   	<mx:String>16:30</mx:String>
+				   	<mx:String>16:45</mx:String>
+				   	<mx:String>17:00</mx:String>
+				   	<mx:String>17:15</mx:String>
+				   	<mx:String>17:30</mx:String>
+				   	<mx:String>17:45</mx:String>
+				   	<mx:String>18:00</mx:String>
+				   	<mx:String>18:15</mx:String>
+				   	<mx:String>18:30</mx:String>
+				   	<mx:String>18:45</mx:String>
+				   	<mx:String>19:00</mx:String>
+				   	<mx:String>19:15</mx:String>
+				   	<mx:String>19:30</mx:String>
+				   	<mx:String>19:45</mx:String>
+				   	<mx:String>20:00</mx:String>
+				   	<mx:String>20:15</mx:String>
+				   	<mx:String>20:30</mx:String>
+				   	<mx:String>20:45</mx:String>
+				   	<mx:String>21:00</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="205.5" y="312" width="71" id="horaTardeCombo" enabled="false">
+			<mx:dataProvider>
+				<mx:Array >
+					<mx:String>7:15</mx:String>
+				   	<mx:String>7:30</mx:String>
+				   	<mx:String>7:45</mx:String>
+				   	<mx:String>8:00</mx:String>
+				   	<mx:String>8:15</mx:String>
+				   	<mx:String>8:30</mx:String>
+				   	<mx:String>8:45</mx:String>
+				   	<mx:String>9:00</mx:String>
+				   	<mx:String>9:15</mx:String>
+				   	<mx:String>9:30</mx:String>
+				   	<mx:String>9:45</mx:String>
+				   	<mx:String>10:00</mx:String>
+				   	<mx:String>10:15</mx:String>
+				   	<mx:String>10:30</mx:String>
+				   	<mx:String>10:45</mx:String>
+				   	<mx:String>11:00</mx:String>
+				   	<mx:String>11:15</mx:String>
+				   	<mx:String>11:30</mx:String>
+				   	<mx:String>11:45</mx:String>
+				   	<mx:String>12:00</mx:String>
+				   	<mx:String>12:15</mx:String>
+				   	<mx:String>12:30</mx:String>
+				   	<mx:String>12:45</mx:String>
+				   	<mx:String>13:00</mx:String>
+				   	<mx:String>13:15</mx:String>
+				   	<mx:String>13:30</mx:String>
+				   	<mx:String>13:45</mx:String>
+				   	<mx:String>14:00</mx:String>
+				   	<mx:String>14:15</mx:String>
+				   	<mx:String>14:30</mx:String>
+				   	<mx:String>14:45</mx:String>
+				   	<mx:String>15:00</mx:String>
+				   	<mx:String>15:15</mx:String>
+				   	<mx:String>15:30</mx:String>
+				   	<mx:String>15:45</mx:String>
+				   	<mx:String>16:00</mx:String>
+				   	<mx:String>16:15</mx:String>
+				   	<mx:String>16:30</mx:String>
+				   	<mx:String>16:45</mx:String>
+				   	<mx:String>17:00</mx:String>
+				   	<mx:String>17:15</mx:String>
+				   	<mx:String>17:30</mx:String>
+				   	<mx:String>17:45</mx:String>
+				   	<mx:String>18:00</mx:String>
+				   	<mx:String>18:15</mx:String>
+				   	<mx:String>18:30</mx:String>
+				   	<mx:String>18:45</mx:String>
+				   	<mx:String>19:00</mx:String>
+				   	<mx:String>19:15</mx:String>
+				   	<mx:String>19:30</mx:String>
+				   	<mx:String>19:45</mx:String>
+				   	<mx:String>20:00</mx:String>
+				   	<mx:String>20:15</mx:String>
+				   	<mx:String>20:30</mx:String>
+				   	<mx:String>20:45</mx:String>
+				   	<mx:String>21:00</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="294.5" y="312" width="71" id="horaTardeCombo0" enabled="false">
+			<mx:dataProvider>
+				<mx:Array >
+					<mx:String>7:15</mx:String>
+				   	<mx:String>7:30</mx:String>
+				   	<mx:String>7:45</mx:String>
+				   	<mx:String>8:00</mx:String>
+				   	<mx:String>8:15</mx:String>
+				   	<mx:String>8:30</mx:String>
+				   	<mx:String>8:45</mx:String>
+				   	<mx:String>9:00</mx:String>
+				   	<mx:String>9:15</mx:String>
+				   	<mx:String>9:30</mx:String>
+				   	<mx:String>9:45</mx:String>
+				   	<mx:String>10:00</mx:String>
+				   	<mx:String>10:15</mx:String>
+				   	<mx:String>10:30</mx:String>
+				   	<mx:String>10:45</mx:String>
+				   	<mx:String>11:00</mx:String>
+				   	<mx:String>11:15</mx:String>
+				   	<mx:String>11:30</mx:String>
+				   	<mx:String>11:45</mx:String>
+				   	<mx:String>12:00</mx:String>
+				   	<mx:String>12:15</mx:String>
+				   	<mx:String>12:30</mx:String>
+				   	<mx:String>12:45</mx:String>
+				   	<mx:String>13:00</mx:String>
+				   	<mx:String>13:15</mx:String>
+				   	<mx:String>13:30</mx:String>
+				   	<mx:String>13:45</mx:String>
+				   	<mx:String>14:00</mx:String>
+				   	<mx:String>14:15</mx:String>
+				   	<mx:String>14:30</mx:String>
+				   	<mx:String>14:45</mx:String>
+				   	<mx:String>15:00</mx:String>
+				   	<mx:String>15:15</mx:String>
+				   	<mx:String>15:30</mx:String>
+				   	<mx:String>15:45</mx:String>
+				   	<mx:String>16:00</mx:String>
+				   	<mx:String>16:15</mx:String>
+				   	<mx:String>16:30</mx:String>
+				   	<mx:String>16:45</mx:String>
+				   	<mx:String>17:00</mx:String>
+				   	<mx:String>17:15</mx:String>
+				   	<mx:String>17:30</mx:String>
+				   	<mx:String>17:45</mx:String>
+				   	<mx:String>18:00</mx:String>
+				   	<mx:String>18:15</mx:String>
+				   	<mx:String>18:30</mx:String>
+				   	<mx:String>18:45</mx:String>
+				   	<mx:String>19:00</mx:String>
+				   	<mx:String>19:15</mx:String>
+				   	<mx:String>19:30</mx:String>
+				   	<mx:String>19:45</mx:String>
+				   	<mx:String>20:00</mx:String>
+				   	<mx:String>20:15</mx:String>
+				   	<mx:String>20:30</mx:String>
+				   	<mx:String>20:45</mx:String>
+				   	<mx:String>21:00</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:Text x="280.5" y="314" text="-" enabled="false"/>
+		<mx:Text x="82.5" y="314" text="Tarde:"/>
+		<mx:Text x="82.5" y="222" text="Nombres:"/>
+		<mx:Text x="104.5" y="10" text="Datos Generales" fontWeight="bold"/>
+		<mx:Text x="104.5" y="260" text="Horarios" fontWeight="bold"/>
+		<mx:Text x="104.5" y="196" text="Relator" fontWeight="bold"/>
+		<mx:Text x="373.5" y="38" text="Código:"/>
+		<mx:Text x="82.5" y="68" text="Fecha de ejecución:"/>
+		<mx:Text x="82.5" y="652" text="Observaciones:"/>
+		<mx:Text x="82.5" y="38" text="Nombre:"/>
+		<mx:Text x="280.5" y="286" text="-" enabled="false"/>
+		<mx:Text x="616.5" y="38" text="-" enabled="false"/>
+		<mx:TextInput x="628.5" y="36" width="22" id="codigoTxtInput" editable="false" enabled="false"/>
+		<mx:Text x="82.5" y="98" text="N° de participantes:"/>
+		<mx:TextInput x="205.5" y="96" width="160" id="numparticipantesTxtInput"  restrict="0-9" enabled="false"/>
+		<mx:Text x="373.5" y="96" text="Estado:"/>
+		
+		<mx:ComboBox x="488.5" y="94" width="160" id="estadoCombo" enabled="false" close="{changeEstadoCombo()}">
+			<mx:dataProvider>
+				<mx:Array >
+					<mx:String>En inscripción</mx:String>
+				   	<mx:String>En ejecución</mx:String>
+				   	<mx:String>En cierre</mx:String>
+				   	<mx:String>Cerrado</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:Text x="373.5" y="128" text="Lugar:"/>
+		<mx:TextInput x="488.5" y="126" width="160" id="lugarTxtInput"  enabled="false"/>
+		<mx:Text x="82.5" y="158" text="Nota mínima:"/>
+		<mx:Text x="82.5" y="128" text="Dirección:"/>
+		<mx:Text x="393.5" y="222" text="Rut: "/>
+		<mx:TextInput x="205.5" y="126" width="160" id="direccionTxtInput"  enabled="false"/>
+		<mx:TextInput x="488.5" y="220" width="160" id="relatorRutTxtInput"  enabled="false"/>
+		<mx:Text x="82.5" y="286" text="Mañana: "/>
+		<mx:DateField x="205.5" y="66" width="160" id="fechaEjecucion" enabled="false"/>
+		<mx:Text x="373.5" y="68" text="Fecha de término:"/>
+		<mx:DateField x="488.5" y="66" width="160" id="fechaTermino" enabled="false"/>
+		<mx:TextInput x="205.5" y="36" id="nombreTxtInput" width="160"/>
+		<mx:TextArea x="205.5" y="650" id="observacionesTxtArea" borderStyle="inset"
+			 wordWrap="true" height="66" width="443"/>
+		<mx:ComboBox width="160" id="relatorCombo" labelField="nombres"
+			 dataProvider="{listaMET}" editable="false"  x="205.5" y="220" enabled="false"/>
+		<mx:Text x="373.5" y="158" text="Asistencia mínima:"/>
+		<mx:ComboBox x="205.5" y="158" width="160" id="notaminCombo" enabled="false">
+			<mx:dataProvider>
+				<mx:Array>
+					<mx:String>1.0</mx:String>
+					<mx:String>1.1</mx:String>
+					<mx:String>1.2</mx:String>
+					<mx:String>1.3</mx:String>
+					<mx:String>1.4</mx:String>
+					<mx:String>1.5</mx:String>
+					<mx:String>1.6</mx:String>
+					<mx:String>1.7</mx:String>
+					<mx:String>1.8</mx:String>
+					<mx:String>1.9</mx:String>
+					<mx:String>2.0</mx:String>
+					<mx:String>2.1</mx:String>
+					<mx:String>2.2</mx:String>
+					<mx:String>2.3</mx:String>
+					<mx:String>2.4</mx:String>
+					<mx:String>2.5</mx:String>
+					<mx:String>2.6</mx:String>
+					<mx:String>2.7</mx:String>
+					<mx:String>2.8</mx:String>
+					<mx:String>2.9</mx:String>
+					<mx:String>3.0</mx:String>
+					<mx:String>3.1</mx:String>
+					<mx:String>3.2</mx:String>
+					<mx:String>3.3</mx:String>
+					<mx:String>3.4</mx:String>
+					<mx:String>3.5</mx:String>
+					<mx:String>3.6</mx:String>
+					<mx:String>3.7</mx:String>
+					<mx:String>3.8</mx:String>
+					<mx:String>3.9</mx:String>
+					<mx:String>4.0</mx:String>
+					<mx:String>4.1</mx:String>
+					<mx:String>4.2</mx:String>
+					<mx:String>4.3</mx:String>
+					<mx:String>4.4</mx:String>
+					<mx:String>4.5</mx:String>
+					<mx:String>4.6</mx:String>
+					<mx:String>4.7</mx:String>
+					<mx:String>4.8</mx:String>
+					<mx:String>4.9</mx:String>
+					<mx:String>5.0</mx:String>
+					<mx:String>5.1</mx:String>
+					<mx:String>5.2</mx:String>
+					<mx:String>5.3</mx:String>
+					<mx:String>5.4</mx:String>
+					<mx:String>5.5</mx:String>
+					<mx:String>5.6</mx:String>
+					<mx:String>5.7</mx:String>
+					<mx:String>5.8</mx:String>
+					<mx:String>5.9</mx:String>
+					<mx:String>6.0</mx:String>
+					<mx:String>6.1</mx:String>
+					<mx:String>6.2</mx:String>
+					<mx:String>6.3</mx:String>
+					<mx:String>6.4</mx:String>
+					<mx:String>6.5</mx:String>
+					<mx:String>6.6</mx:String>
+					<mx:String>6.7</mx:String>
+					<mx:String>6.8</mx:String>
+					<mx:String>6.9</mx:String>
+					<mx:String>7.0</mx:String>
+					
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:Text x="104.5" y="350" text="Alumnos" fontWeight="bold"/>
+		
+		<mx:DataGrid x="82.5" y="376" width="566" height="236" id="listaGrid" dataProvider="{listaAlumnos}"
+			  updateComplete="this.numeroAlumnos=listaAlumnos.length" allowMultipleSelection="true" 
+			  editable="true" itemEditEnd="{itemEditEnd(event)}" doubleClickEnabled="true" 
+			  doubleClick="tablaDobleClick()" keyUp="{tablaKeyUp(event)}">
+			<mx:toolTip>lista con alumnos, puede seleccionar varios manteniendo apretada la tecla Crtl</mx:toolTip>
+			<mx:columns>
+				<mx:DataGridColumn headerText="Nombres" dataField="nombres" width="120" editable="false"/>
+				<mx:DataGridColumn headerText="Apellidos" dataField="apellidos" width="120" editable="false"/>
+				<mx:DataGridColumn headerText="Rut" dataField="rut_alumno" width="70" editable="false"/>
+				<mx:DataGridColumn headerText="Asistencia*" dataField="porc_asistencia" id="asistenciaColum" width="60" editable="false"/>
+				<mx:DataGridColumn headerText="Nota*" dataField="nota"  id="notaColum" width="50" editable="false"/>
+			</mx:columns>
+		</mx:DataGrid>
+		<mx:Button x="530.5" y="620" id="agregarButton" label="Agregar alumno" click="{agregarAlumnoClick()}"/>
+		<mx:Label x="82" y="620" text="*La Nota debe ser entre 1.0 y 7.0 y la Asistencia entre 0% y 100%"/>
+		<mx:Label x="367.5" y="350" id="cantidadAlumnosLabel" text="{'Cantidad de alumnos: '+numeroAlumnos}"/>
+		<ns2:AdvancedAutoComplete x="518.5" y="346" width="130" dataProvider="{listaAlumnos}" labelField="rut_alumno"
+			prompt="Ingrese rut de Alumno" allowMultipleSelection="false" />
+		
+	</mx:Canvas>
+	<mx:HBox x="313" y="777" width="432" horizontalAlign="right" height="22">
+		<mx:Button label="Volver" click="{cancelarClick()}"/>
+		<mx:Button label="Guardar cambios" id="guardarButton" click="{guardarClick()}">
+			<mx:toolTip>Recuerde guardar los cambios antes de Actualizar estado</mx:toolTip>
+		</mx:Button>
+		<mx:Button id="registrarButton" label="{this.registrarButtonLabel}" click="{registrarClick()}"/>
+	</mx:HBox>
+</mx:Canvas>

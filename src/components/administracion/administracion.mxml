@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="800" height="500" creationComplete="creationCompleteHandler()" borderColor="#F49821" borderStyle="inset" xmlns:mets="components.administracion.mets.*" xmlns:inventario="components.administracion.inventario.*" xmlns:headHunters="components.administracion.headHunters.*" xmlns:clientes="components.administracion.clientes.*">
+	<mx:Script>
+		<![CDATA[
+			public var currentTab:int=0;
+			
+			private function creationCompleteHandler():void {
+	            this.id ="administracionComponent";
+         	}  
+         	private function tabClick():void{
+         		currentTab = tab.selectedIndex;
+         	}
+		]]>
+	</mx:Script>
+	<mx:TabNavigator x="10" y="42" width="777" height="445" id="tab" click="tabClick()">
+		<mx:Canvas label="METs" height="100%">
+			<mets:verTodos id="tabVerTodosMET"/>			
+		</mx:Canvas>
+		<mx:Canvas label="Clientes" width="100%" height="100%">
+			<clientes:VerTodosClientes id="tabVerTodosClientes"/>
+		</mx:Canvas>
+		<mx:Canvas label="Inventario" width="100%" height="100%" enabled="false">
+			<inventario:inventario />
+		</mx:Canvas>
+		<!--
+		<mx:Canvas label="Head hunters" width="100%" height="100%">
+			<headHunters:headHunters />
+		</mx:Canvas>
+		-->
+	</mx:TabNavigator>
+	<mx:Text x="10" y="10" text="Administración del sistema" fontSize="15" width="776" fontWeight="bold" textAlign="center"/>
+	
+</mx:Canvas>

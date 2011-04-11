@@ -1,0 +1,82 @@
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="650" height="395" borderStyle="inset" 
+	addedToStage="{showEvent()}" >
+	<mx:Script>
+		<![CDATA[
+			import mx.events.CloseEvent;
+			import clases.MET;
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import flash.utils.Timer;
+			
+			[Bindable]
+			private var listaDespachos:ArrayCollection;
+			private var childrens:Array;
+			private var c:Conexion = new Conexion;
+			
+			private function editarClick():void{
+				if(listaGrid.selectedItem!=null){
+					this.childrens = this.getChildren();
+					removeAllChildren();
+					//var object:editarSeleccionado = new editarSeleccionado;
+					//al obtener el objeto no se debe castear!
+					//var met:Object = listaMET.getItemAt(listaGrid.selectedIndex);
+					//Alert.show("grid index: "+listaGrid.selectedIndex+" lista size: "+listaMET.length+" rut met: "+met.rut);
+					//this.addChild(object );
+					//object.cargarMET(met);
+				}
+				else{
+					Alert.show("Error, primero debe seleccionar un elemento!.");
+				}
+			}
+			private function eliminarClick():void{
+				if(listaGrid.selectedItem!=null)
+					Alert.show("¿Desea realmente eliminar el registro?", "Confirmación", Alert.YES|Alert.NO, this, confirmHandler,null, Alert.NO);
+				else{
+					Alert.show("Error, primero debe seleccionar un elemento!.");
+				}
+			}
+			private function confirmHandler(event:CloseEvent):void {
+				if (event.detail == Alert.YES) {
+					var object:Object = listaDespachos.getItemAt(listaGrid.selectedIndex);
+					
+					c.deleteDespacho(object.transaccion);
+					var minuteTimer:Timer = new Timer(1000, 1);
+					minuteTimer.addEventListener(TimerEvent.TIMER_COMPLETE, onTimerComplete);
+					minuteTimer.start();
+					
+				}
+			}
+			private function onTimerComplete(event:TimerEvent):void{
+            	showEvent();
+        	}
+			public function showVerTodos():void{
+				removeAllChildren();
+				//vuelve a insertar todos los hijos guardados
+				var i:int;
+				for(i=0;i<childrens.length;i++){
+					this.addChild(childrens[i]);
+				}
+				//llama al evento que obtiene todos los mets de la bd
+				showEvent();
+			}
+			
+			private function showEvent():void{
+				var c:Conexion = new Conexion;
+				listaDespachos = c.getAllDespacho();
+			}
+		]]>
+	</mx:Script>
+	<mx:DataGrid x="10" y="37" width="626" height="314" id="listaGrid" dataProvider="{listaDespachos}">
+		<mx:columns>
+			<mx:DataGridColumn headerText="Código despacho" dataField="transaccion" width="80"/>
+			<mx:DataGridColumn headerText="Producto" dataField="producto_nombre" width="80"/>
+			<mx:DataGridColumn headerText="Cód. Producto" dataField="producto_codigo" width="70"/>
+			<mx:DataGridColumn headerText="Destino" dataField="destino" width="70"/>
+			<mx:DataGridColumn headerText="Cantidad" dataField="cantidad" width="45"/>
+			<mx:DataGridColumn headerText="Responsable" dataField="responsable" width="70"/>
+		</mx:columns>
+	</mx:DataGrid>
+	<mx:Text x="10" y="10" text="Lista con todos los despachos realizados" fontSize="11"/>
+	<mx:Button x="392" y="359" label="Actualizar tabla" click="{showEvent()}"/>
+	<mx:Button x="516" y="359" label="Eliminar registro" click="eliminarClick()"/>
+</mx:Canvas>

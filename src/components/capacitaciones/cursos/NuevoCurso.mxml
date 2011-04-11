@@ -1,0 +1,515 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="755" height="506"
+	 xmlns:ns1="components.*" creationComplete="init()">
+<mx:Script>
+	<![CDATA[
+		import mx.rpc.events.ResultEvent;
+		import mx.rpc.http.mxml.HTTPService;
+		import clases.capacitaciones.*;
+		import mx.collections.ArrayCollection;
+		import clases.MET;
+		import mx.controls.Alert;
+		
+		[Bindable]
+		private var listaMET:ArrayCollection;
+		[Bindable]
+		private var lista:ArrayCollection;
+		[Bindable]
+		private var listaDD:ArrayCollection;
+		private var c:Conexion;
+		[Bindable]
+		private var currentCodigo:String;
+		
+		private var emailService:HTTPService =  new HTTPService;
+		
+		private function init():void{
+			c = new Conexion;
+			
+			listaDD = new ArrayCollection;
+			listaMET = c.getAllMets();
+			listaDD = c.getAllCodigoDD();
+			
+			MetActivo.componenteActivo =  NuevoCurso;
+			MetActivo.rutSeleccionado = MetActivo.rut;
+			
+			this.fechaEjecucion.selectedDate = new Date();
+			dateFieldInit(fechaEjecucion);
+			dateFieldInit(fechaTermino);
+			
+			//this.fechaIngresoInput.selectedDate = new Date;
+			//this.fechaNacimientoInput.selectedDate = new Date;
+			
+			
+			emailService.url = "http://www.kimen.cl/amfphp/services/email.php";
+			emailService.method="POST"; 
+			emailService.resultFormat="xml";
+			emailService.addEventListener(ResultEvent.RESULT, emailResult);
+			
+			emailService.useProxy=false;
+			if(MetActivo.permiso=="Gerencia")
+				this.estadoCombo.enabled = true;
+           	
+			//actualizamos el rut del relator en el formulario
+           	this.relatorChanged();
+           	
+		}
+		private function getMaxCurso(tipo:String):void{
+			lista = c.getMaxCurso(tipo);
+			var minuteTimer:Timer = new Timer(2000, 1);
+			minuteTimer.addEventListener(TimerEvent.TIMER_COMPLETE, onTimerComplete);
+			minuteTimer.start();
+		}
+			
+		private function onTimerComplete(event:TimerEvent):void{
+			var string:String;
+			if(lista.getItemAt(0).max_codigo !=null){
+				//Alert.show(String(lista.getItemAt(0).max_codigo.toString()).substr(7,2));
+				string = String(lista.getItemAt(0).max_codigo.toString()).substr(7,2);
+				this.codigoTxtInput.text = String(int(string)+1);
+				//relleno con un cero a la izq cuando tiene un solo digito
+			
+				if(codigoTxtInput.text.length==1)
+					codigoTxtInput.text = "0"+codigoTxtInput.text;
+				
+			}
+			else{
+				this.codigoTxtInput.text = "01";
+			}
+           	this.currentCodigo = this.codigoCombo.selectedItem.toString()+codigoTxtInput.text;
+           	//actualizamos el rut del relator en el formulario
+           	this.relatorChanged();
+       	}
+		
+		//formatea los datefield al formato dd/mm/aaaa
+		private function dateFieldInit(date:DateField):void {
+       		date.dayNames=['Dom', 'Lun', 'Mar', 
+       		'Mie', 'Jue', 'Vie', 'Sab'];
+       		date.monthNames=['Enero','Febrero','Marzo','Abril',
+            'Mayo','Junio','Julio','Agosto','Septiembre',
+            'Octubre','Noviembre','Diciembre'];
+              	
+            date.firstDayOfWeek = 1;
+            date.selectedDate = (new Date());
+            date.formatString="DD/MM/YYYY" ;
+               
+  		}
+		
+		private function cancelarClick():void{
+			(this.parent as VerTodosCursos).showVerTodos();
+		}
+		/*
+		*REGISTRA UN NUEVO CURSO
+		*/
+		private function registrarClick():void{
+			if(checkFields()){
+				var curso:Curso = new Curso;
+				curso.asistencia_minima = this.asistenciaminCombo.text;
+				curso.codigo_interno = this.codigoCombo.text+this.codigoTxtInput.text;
+				curso.direccion = this.direccionTxtInput.text;
+				curso.estado = this.estadoCombo.selectedItem.toString();
+				curso.fecha_ejecucion = this.fechaEjecucion.text;
+				curso.fecha_termino = this.fechaTermino.text;
+				curso.horario_manana_ini = this.horaMananaCombo.text;
+				curso.horario_manana_fin = this.horaMananaCombo0.text;
+				curso.horario_tarde_ini = this.horaTardeCombo.text;
+				curso.horario_tarde_fin = this.horaTardeCombo0.text;
+				curso.lugar = this.lugarTxtInput.text;
+				curso.nombre = this.nombreTxtInput.text;
+				curso.nota_minima = this.notaminCombo.text;
+				curso.num_participantes = int(this.numparticipantesTxtInput.text);
+				curso.observaciones = this.observacionesTxtArea.text;
+				curso.relator_nombre = this.relatorCombo.text;
+				curso.relator_rut = this.relatorRutTxtInput.text;
+				
+				c.insertCurso(curso);
+			}else{
+				Alert.show("Error, debe llenar todos los campos.");
+			}
+		}
+		private function checkFields():Boolean{
+			if(this.nombreTxtInput.text!="" && this.codigoCombo.selectedIndex>0 && this.codigoTxtInput.text!="" && this.numparticipantesTxtInput.text!="" && this.estadoCombo.text!="" && this.direccionTxtInput.text!="" && this.lugarTxtInput.text!="" && this.observacionesTxtArea.text!="")
+				return true;
+				
+			return false;
+		}
+		public function sendEmail(toEmail:String, nombreDD:String, tarea:String, fecha:String):void{
+			var c:Conexion = new Conexion;
+            var senderName:String = "KIMEN Administración";
+            var senderEmail:String = "admin@kimen.cl";
+            var sendToName:String = "MET";
+            var sendToEmail:String = toEmail;
+            var emailMessage:String = "Se le ha asignado la tarea de: "+tarea+", para el: "+fecha+".\n" + 
+            		"Favor revisar el Diseño y Desarrollo: "+nombreDD;
+        
+            c.gateway.call("email.send", new Responder(emailResult,emailResult),
+            senderName, senderEmail, sendToName, sendToEmail, emailMessage);
+        
+           
+        }    
+        
+        public function emailResult(event:ResultEvent):void{
+        	
+            
+        }
+		private function getFormattedDate(date:Date):String{
+			var finalDate:String;
+			finalDate = date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
+			//Alert.show("fecha: "+finalDate);
+			return finalDate;
+		}
+		private function relatorChanged():void{
+			this.relatorRutTxtInput.text = this.listaMET.getItemAt(this.relatorCombo.selectedIndex).rut;
+		}
+		private function nuevoCurso():void{
+			(this.parent as VerTodosCursos).nuevoClick();	
+		}
+		
+	]]>
+</mx:Script>
+	<mx:Button x="462" y="475" label="Cancelar" click="{cancelarClick()}"/>
+	<mx:Text x="10" y="10" text="Registro de un nuevo Curso" fontSize="11"/>
+	<mx:Button x="666" y="475" label="Registrar" id="registrarButton" click="{registrarClick()}"/>
+	<mx:Button x="545" y="475" label="Nuevo Registro" id="registrarButton0" click="{nuevoCurso()}"/>
+	<mx:Canvas x="10" y="37" width="735" height="430" borderStyle="inset">
+		<mx:ComboBox x="488.5" y="36" width="125" id="codigoCombo" dataProvider="{listaDD}"
+			 change="{this.getMaxCurso(listaDD.getItemAt(codigoCombo.selectedIndex).codigo_interno)}" labelField="codigo_interno">
+			
+		</mx:ComboBox>
+		<mx:ComboBox x="488.5" y="156" width="160" id="asistenciaminCombo">
+			<mx:dataProvider>
+				<mx:Array>
+					<mx:String>0 %</mx:String>
+					<mx:String>5 %</mx:String>
+					<mx:String>10 %</mx:String>
+					<mx:String>15 %</mx:String>
+					<mx:String>20 %</mx:String>
+					<mx:String>25 %</mx:String>
+					<mx:String>30 %</mx:String>
+					<mx:String>35 %</mx:String>
+					<mx:String>40 %</mx:String>
+					<mx:String>45 %</mx:String>
+					<mx:String>50 %</mx:String>
+					<mx:String>55 %</mx:String>
+					<mx:String>60 %</mx:String>
+					<mx:String>65 %</mx:String>
+					<mx:String>70 %</mx:String>
+					<mx:String>75 %</mx:String>
+					<mx:String>80 %</mx:String>
+					<mx:String>85 %</mx:String>
+					<mx:String>90 %</mx:String>
+					<mx:String>95 %</mx:String>
+					<mx:String>100 %</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="205.5" y="284" width="66" id="horaMananaCombo"
+			 change="{this.getMaxCurso(codigoCombo.selectedItem.toString())}" >
+			<mx:dataProvider>
+				<mx:Array >
+					<mx:String>7:00</mx:String>
+					<mx:String>7:15</mx:String>
+				   	<mx:String>7:30</mx:String>
+				   	<mx:String>7:45</mx:String>
+				   	<mx:String>8:00</mx:String>
+				   	<mx:String>8:15</mx:String>
+				   	<mx:String>8:30</mx:String>
+				   	<mx:String>8:45</mx:String>
+				   	<mx:String>9:00</mx:String>
+				   	<mx:String>9:15</mx:String>
+				   	<mx:String>9:30</mx:String>
+				   	<mx:String>9:45</mx:String>
+				   	<mx:String>10:00</mx:String>
+				   	<mx:String>10:15</mx:String>
+				   	<mx:String>10:30</mx:String>
+				   	<mx:String>10:45</mx:String>
+				   	<mx:String>11:00</mx:String>
+				   	<mx:String>11:15</mx:String>
+				   	<mx:String>11:30</mx:String>
+				   	<mx:String>11:45</mx:String>
+				   	<mx:String>12:00</mx:String>
+				   	<mx:String>12:15</mx:String>
+				   	<mx:String>12:30</mx:String>
+				   	<mx:String>12:45</mx:String>
+				   	<mx:String>13:00</mx:String>
+				   	<mx:String>13:15</mx:String>
+				   	<mx:String>13:30</mx:String>
+				   	<mx:String>13:45</mx:String>
+				   	<mx:String>14:00</mx:String>
+				   	<mx:String>14:15</mx:String>
+				   	<mx:String>14:30</mx:String>
+				   	<mx:String>14:45</mx:String>
+				   	<mx:String>15:00</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="299.5" y="284" width="66" id="horaMananaCombo0"
+			 change="{this.getMaxCurso(codigoCombo.selectedItem.toString())}" >
+			<mx:dataProvider>
+				<mx:Array >
+				   	<mx:String>12:00</mx:String>
+				   	<mx:String>12:15</mx:String>
+				   	<mx:String>12:30</mx:String>
+				   	<mx:String>12:45</mx:String>
+				   	<mx:String>13:00</mx:String>
+				   	<mx:String>13:15</mx:String>
+				   	<mx:String>13:30</mx:String>
+				   	<mx:String>13:45</mx:String>
+				   	<mx:String>14:00</mx:String>
+				   	<mx:String>14:15</mx:String>
+				   	<mx:String>14:30</mx:String>
+				   	<mx:String>14:45</mx:String>
+				   	<mx:String>15:00</mx:String>
+				   	<mx:String>15:15</mx:String>
+				   	<mx:String>15:30</mx:String>
+				   	<mx:String>15:45</mx:String>
+				   	<mx:String>16:00</mx:String>
+				   	<mx:String>16:15</mx:String>
+				   	<mx:String>16:30</mx:String>
+				   	<mx:String>16:45</mx:String>
+				   	<mx:String>17:00</mx:String>
+				   	<mx:String>17:15</mx:String>
+				   	<mx:String>17:30</mx:String>
+				   	<mx:String>17:45</mx:String>
+				   	<mx:String>18:00</mx:String>
+				   	<mx:String>18:15</mx:String>
+				   	<mx:String>18:30</mx:String>
+				   	<mx:String>18:45</mx:String>
+				   	<mx:String>19:00</mx:String>
+				   	<mx:String>19:15</mx:String>
+				   	<mx:String>19:30</mx:String>
+				   	<mx:String>19:45</mx:String>
+				   	<mx:String>20:00</mx:String>
+				   	<mx:String>20:15</mx:String>
+				   	<mx:String>20:30</mx:String>
+				   	<mx:String>20:45</mx:String>
+				   	<mx:String>21:00</mx:String>
+				   	<mx:String>21:15</mx:String>
+				   	<mx:String>21:30</mx:String>
+				   	<mx:String>21:45</mx:String>
+				   	<mx:String>22:00</mx:String>
+				   	<mx:String>22:15</mx:String>
+				   	<mx:String>22:30</mx:String>
+				   	<mx:String>22:45</mx:String>
+				   	<mx:String>23:00</mx:String>
+				   	<mx:String>23:15</mx:String>
+				   	<mx:String>23:30</mx:String>
+				   	<mx:String>23:45</mx:String>
+				   	<mx:String>24:00</mx:String>
+
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="205.5" y="312" width="66" id="horaTardeCombo"
+			 change="{this.getMaxCurso(codigoCombo.selectedItem.toString())}" >
+			<mx:dataProvider>
+				<mx:Array >
+					<mx:String>7:15</mx:String>
+				   	<mx:String>7:30</mx:String>
+				   	<mx:String>7:45</mx:String>
+				   	<mx:String>8:00</mx:String>
+				   	<mx:String>8:15</mx:String>
+				   	<mx:String>8:30</mx:String>
+				   	<mx:String>8:45</mx:String>
+				   	<mx:String>9:00</mx:String>
+				   	<mx:String>9:15</mx:String>
+				   	<mx:String>9:30</mx:String>
+				   	<mx:String>9:45</mx:String>
+				   	<mx:String>10:00</mx:String>
+				   	<mx:String>10:15</mx:String>
+				   	<mx:String>10:30</mx:String>
+				   	<mx:String>10:45</mx:String>
+				   	<mx:String>11:00</mx:String>
+				   	<mx:String>11:15</mx:String>
+				   	<mx:String>11:30</mx:String>
+				   	<mx:String>11:45</mx:String>
+				   	<mx:String>12:00</mx:String>
+				   	<mx:String>12:15</mx:String>
+				   	<mx:String>12:30</mx:String>
+				   	<mx:String>12:45</mx:String>
+				   	<mx:String>13:00</mx:String>
+				   	<mx:String>13:15</mx:String>
+				   	<mx:String>13:30</mx:String>
+				   	<mx:String>13:45</mx:String>
+				   	<mx:String>14:00</mx:String>
+				   	<mx:String>14:15</mx:String>
+				   	<mx:String>14:30</mx:String>
+				   	<mx:String>14:45</mx:String>
+				   	<mx:String>15:00</mx:String>
+				   	<mx:String>15:15</mx:String>
+				   	<mx:String>15:30</mx:String>
+				   	<mx:String>15:45</mx:String>
+				   	<mx:String>16:00</mx:String>
+				   	<mx:String>16:15</mx:String>
+				   	<mx:String>16:30</mx:String>
+				   	<mx:String>16:45</mx:String>
+				   	<mx:String>17:00</mx:String>
+				   	<mx:String>17:15</mx:String>
+				   	<mx:String>17:30</mx:String>
+				   	<mx:String>17:45</mx:String>
+				   	<mx:String>18:00</mx:String>
+				   	<mx:String>18:15</mx:String>
+				   	<mx:String>18:30</mx:String>
+				   	<mx:String>18:45</mx:String>
+				   	<mx:String>19:00</mx:String>
+				   	<mx:String>19:15</mx:String>
+				   	<mx:String>19:30</mx:String>
+				   	<mx:String>19:45</mx:String>
+				   	<mx:String>20:00</mx:String>
+				   	<mx:String>20:15</mx:String>
+				   	<mx:String>20:30</mx:String>
+				   	<mx:String>20:45</mx:String>
+				   	<mx:String>21:00</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="299.5" y="312" width="66" id="horaTardeCombo0"
+			 change="{this.getMaxCurso(codigoCombo.selectedItem.toString())}" >
+			<mx:dataProvider>
+				<mx:Array >
+					<mx:String>7:15</mx:String>
+				   	<mx:String>7:30</mx:String>
+				   	<mx:String>7:45</mx:String>
+				   	<mx:String>8:00</mx:String>
+				   	<mx:String>8:15</mx:String>
+				   	<mx:String>8:30</mx:String>
+				   	<mx:String>8:45</mx:String>
+				   	<mx:String>9:00</mx:String>
+				   	<mx:String>9:15</mx:String>
+				   	<mx:String>9:30</mx:String>
+				   	<mx:String>9:45</mx:String>
+				   	<mx:String>10:00</mx:String>
+				   	<mx:String>10:15</mx:String>
+				   	<mx:String>10:30</mx:String>
+				   	<mx:String>10:45</mx:String>
+				   	<mx:String>11:00</mx:String>
+				   	<mx:String>11:15</mx:String>
+				   	<mx:String>11:30</mx:String>
+				   	<mx:String>11:45</mx:String>
+				   	<mx:String>12:00</mx:String>
+				   	<mx:String>12:15</mx:String>
+				   	<mx:String>12:30</mx:String>
+				   	<mx:String>12:45</mx:String>
+				   	<mx:String>13:00</mx:String>
+				   	<mx:String>13:15</mx:String>
+				   	<mx:String>13:30</mx:String>
+				   	<mx:String>13:45</mx:String>
+				   	<mx:String>14:00</mx:String>
+				   	<mx:String>14:15</mx:String>
+				   	<mx:String>14:30</mx:String>
+				   	<mx:String>14:45</mx:String>
+				   	<mx:String>15:00</mx:String>
+				   	<mx:String>15:15</mx:String>
+				   	<mx:String>15:30</mx:String>
+				   	<mx:String>15:45</mx:String>
+				   	<mx:String>16:00</mx:String>
+				   	<mx:String>16:15</mx:String>
+				   	<mx:String>16:30</mx:String>
+				   	<mx:String>16:45</mx:String>
+				   	<mx:String>17:00</mx:String>
+				   	<mx:String>17:15</mx:String>
+				   	<mx:String>17:30</mx:String>
+				   	<mx:String>17:45</mx:String>
+				   	<mx:String>18:00</mx:String>
+				   	<mx:String>18:15</mx:String>
+				   	<mx:String>18:30</mx:String>
+				   	<mx:String>18:45</mx:String>
+				   	<mx:String>19:00</mx:String>
+				   	<mx:String>19:15</mx:String>
+				   	<mx:String>19:30</mx:String>
+				   	<mx:String>19:45</mx:String>
+				   	<mx:String>20:00</mx:String>
+				   	<mx:String>20:15</mx:String>
+				   	<mx:String>20:30</mx:String>
+				   	<mx:String>20:45</mx:String>
+				   	<mx:String>21:00</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:Text x="280.5" y="314" text="-"/>
+		<mx:Text x="82.5" y="314" text="Tarde:"/>
+		<mx:Text x="82.5" y="222" text="Nombres:"/>
+		<mx:Text x="104.5" y="10" text="Datos Generales" fontWeight="bold"/>
+		<mx:Text x="124.5" y="260" text="Horarios" fontWeight="bold"/>
+		<mx:Text x="127.5" y="194" text="Relator" fontWeight="bold"/>
+		<mx:Text x="373.5" y="38" text="Código:"/>
+		<mx:Text x="82.5" y="68" text="Fecha de ejecución:"/>
+		<mx:Text x="82.5" y="353" text="Observaciones:"/>
+		<mx:Text x="82.5" y="38" text="Nombre:"/>
+		<mx:Text x="280.5" y="286" text="-"/>
+		<mx:Text x="616.5" y="38" text="-"/>
+		<mx:TextInput x="628.5" y="36" width="22" id="codigoTxtInput" editable="false" enabled="false"/>
+		<mx:Text x="82.5" y="98" text="N° de participantes:"/>
+		<mx:TextInput x="205.5" y="96" width="160" id="numparticipantesTxtInput"  restrict="0-9"/>
+		<mx:Text x="373.5" y="96" text="Estado:"/>
+		
+		<mx:ComboBox x="488.5" y="94" width="160" id="estadoCombo" enabled="false">
+			<mx:dataProvider>
+				<mx:Array >
+					<mx:String>En inscripción</mx:String>
+				   	<mx:String>En ejecución</mx:String>
+				   	<mx:String>En cierre</mx:String>
+				   	<mx:String>Cerrado</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:Text x="373.5" y="128" text="Lugar:"/>
+		<mx:TextInput x="488.5" y="126" width="160" id="lugarTxtInput" />
+		<mx:Text x="82.5" y="158" text="Nota mínima:"/>
+		<mx:Text x="82.5" y="128" text="Dirección:"/>
+		<mx:Text x="393.5" y="222" text="Rut: "/>
+		<mx:TextInput x="205.5" y="126" width="160" id="direccionTxtInput" />
+		<mx:TextInput x="488.5" y="220" width="160" id="relatorRutTxtInput"  enabled="false"/>
+		<mx:Text x="82.5" y="286" text="Mañana: "/>
+		<mx:DateField x="205.5" y="66" width="160" id="fechaEjecucion"/>
+		<mx:Text x="373.5" y="68" text="Fecha de término:"/>
+		<mx:DateField x="488.5" y="66" width="160" id="fechaTermino"/>
+		<mx:TextInput x="205.5" y="36" id="nombreTxtInput" width="160"/>
+		<mx:TextArea x="205.5" y="351" id="observacionesTxtArea" borderStyle="inset"
+			 wordWrap="true" height="66" width="443"/>
+		<mx:ComboBox width="160" id="relatorCombo" labelField="nombres"
+			 dataProvider="{listaMET}" editable="false"  x="205.5" y="220" change="{relatorChanged()}"/>
+		<mx:Text x="373.5" y="158" text="Asistencia mínima:"/>
+		<mx:ComboBox x="205.5" y="158" width="160" id="notaminCombo">
+			<mx:dataProvider>
+				<mx:Array>
+					<mx:String>0</mx:String><mx:String>1</mx:String><mx:String>2</mx:String>
+					<mx:String>3</mx:String><mx:String>4</mx:String><mx:String>5</mx:String>
+					<mx:String>6</mx:String><mx:String>7</mx:String><mx:String>8</mx:String>
+					<mx:String>9</mx:String><mx:String>10</mx:String><mx:String>11</mx:String>
+					<mx:String>12</mx:String><mx:String>13</mx:String><mx:String>14</mx:String>
+					<mx:String>15</mx:String><mx:String>16</mx:String><mx:String>17</mx:String>
+					<mx:String>18</mx:String><mx:String>19</mx:String><mx:String>20</mx:String>
+					<mx:String>21</mx:String><mx:String>22</mx:String><mx:String>23</mx:String>
+					<mx:String>24</mx:String><mx:String>25</mx:String><mx:String>26</mx:String>
+					<mx:String>27</mx:String><mx:String>28</mx:String><mx:String>29</mx:String>
+					<mx:String>30</mx:String><mx:String>31</mx:String><mx:String>32</mx:String>
+					<mx:String>33</mx:String><mx:String>34</mx:String><mx:String>35</mx:String>
+					<mx:String>36</mx:String><mx:String>37</mx:String><mx:String>38</mx:String>
+					<mx:String>39</mx:String><mx:String>40</mx:String><mx:String>41</mx:String>
+					<mx:String>42</mx:String><mx:String>43</mx:String><mx:String>44</mx:String>
+					<mx:String>45</mx:String><mx:String>46</mx:String><mx:String>47</mx:String>
+					<mx:String>48</mx:String><mx:String>49</mx:String><mx:String>50</mx:String>
+					<mx:String>51</mx:String><mx:String>52</mx:String><mx:String>53</mx:String>
+					<mx:String>54</mx:String><mx:String>55</mx:String><mx:String>56</mx:String>
+					<mx:String>57</mx:String><mx:String>58</mx:String><mx:String>59</mx:String>
+					<mx:String>60</mx:String><mx:String>61</mx:String><mx:String>62</mx:String>
+					<mx:String>63</mx:String><mx:String>64</mx:String><mx:String>65</mx:String>
+					<mx:String>66</mx:String><mx:String>67</mx:String><mx:String>68</mx:String>
+					<mx:String>69</mx:String><mx:String>70</mx:String><mx:String>71</mx:String>
+					<mx:String>72</mx:String><mx:String>73</mx:String><mx:String>74</mx:String>
+					<mx:String>75</mx:String><mx:String>76</mx:String><mx:String>77</mx:String>
+					<mx:String>78</mx:String><mx:String>79</mx:String><mx:String>80</mx:String>
+					<mx:String>81</mx:String><mx:String>82</mx:String><mx:String>83</mx:String>
+					<mx:String>84</mx:String><mx:String>85</mx:String><mx:String>86</mx:String>
+					<mx:String>87</mx:String><mx:String>88</mx:String><mx:String>89</mx:String>
+					<mx:String>90</mx:String><mx:String>91</mx:String><mx:String>92</mx:String>
+					<mx:String>93</mx:String><mx:String>94</mx:String><mx:String>95</mx:String>
+					<mx:String>96</mx:String><mx:String>97</mx:String><mx:String>98</mx:String>
+					<mx:String>99</mx:String><mx:String>100</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		
+	</mx:Canvas>
+	
+</mx:Canvas>

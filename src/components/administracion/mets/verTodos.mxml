@@ -1,0 +1,288 @@
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" label="METs"  width="775" height="412"
+	addedToStage="{showEvent()}"  xmlns:ns1="com.hillelcoren.components.*" 
+	xmlns:ns2="com.hillelcoren.components.autoComplete.classes.*">
+	<mx:Script>
+		<![CDATA[
+		import mx.printing.*;
+        import mx.collections.ArrayCollection;
+        // Import the MXML custom print view control.
+        import myComponents.FormPrintView;
+        import mx.events.DataGridEvent;
+			
+			import org.alivepdf.annotations.Annotation;
+			import org.alivepdf.annotations.AnnotationType;
+			import org.alivepdf.annotations.TextAnnotation;
+			import org.alivepdf.colors.CMYKColor;
+			import org.alivepdf.colors.RGBColor;
+			import org.alivepdf.colors.SpotColor;
+			import org.alivepdf.data.Grid;
+			import org.alivepdf.data.GridColumn;
+			import org.alivepdf.events.CharacterEvent;
+			import org.alivepdf.fonts.CodePage;
+			import org.alivepdf.fonts.CoreFont;
+			import org.alivepdf.fonts.EmbeddedFont;
+			import org.alivepdf.fonts.FontFamily;
+			import org.alivepdf.fonts.IFont;
+			import org.alivepdf.images.ColorSpace;
+			import org.alivepdf.layout.Align;
+			import org.alivepdf.layout.Mode;
+			import org.alivepdf.layout.Orientation;
+			import org.alivepdf.layout.Position;
+			import org.alivepdf.layout.Resize;
+			import org.alivepdf.layout.Size;
+			import org.alivepdf.layout.Unit;
+			import org.alivepdf.links.HTTPLink;
+			import org.alivepdf.links.Highlight;
+			import org.alivepdf.links.ILink;
+			import org.alivepdf.links.InternalLink;
+			import org.alivepdf.pages.Page;
+			import org.alivepdf.pdf.PDF;
+			import org.alivepdf.saving.Method;
+            import org.alivepdf.data.Grid;
+            import org.alivepdf.drawing.Joint;
+			import mx.events.CloseEvent;
+			import clases.MET;
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import flash.utils.Timer;
+			
+			[Bindable]
+			private var listaMET:ArrayCollection;
+			private var c:Conexion = new Conexion;
+			private var childrens:Array;
+			private var urlStream:URLStream = new URLStream();
+			private var fr:FileReference = new FileReference; 
+			private var total:Number = 0; 
+			//para impresion 
+	        public var footerHeight:Number = 20;
+	        public var prodIndex:Number;
+	        public var prodTotal:Number = 0;
+	        
+	
+	        // The function to print the output.
+	        public function doPrint():void {
+	            // Create a FlexPrintJob instance.
+	            var printJob:FlexPrintJob = new FlexPrintJob();
+	            
+	            // Start the print job.
+	            if (printJob.start()) {
+	                // Create a FormPrintView control 
+	                // as a child of the application.
+	                var thePrintView:FormPrintView = new FormPrintView();
+	                addChild(thePrintView);
+	                
+	                // Set the print view properties.
+	                thePrintView.width=printJob.pageWidth;
+	                thePrintView.height=printJob.pageHeight;
+	                thePrintView.prodTotal = this.listaMET.length;
+	                
+	                // Set the data provider of the FormPrintView 
+	                // component's DataGrid to be the data provider of 
+	                // the displayed DataGrid.
+	                thePrintView.myDataGrid.dataProvider = this.listaGrid.dataProvider;	                
+	                // Create a single-page image.
+	                thePrintView.showPage("single");
+	                
+	                // If the print image's DataGrid can hold all the  
+	                // data provider's rows, add the page to the print job. 
+	                if(!thePrintView.myDataGrid.validNextPage)
+	                {
+	                    printJob.addObject(thePrintView);
+	                }
+	                // Otherwise, the job requires multiple pages.
+	                else
+	                {
+	                    // Create the first page and add it to the print job.
+	                    thePrintView.showPage("first");
+	                    printJob.addObject(thePrintView);
+	                    thePrintView.pageNumber++;
+	                    
+	                    // Loop through the following code 
+	                    // until all pages are queued.
+	                    while(true)
+	                    {
+	                        // Move the next page of data to the top of 
+	                        // the PrintDataGrid.
+	                        thePrintView.myDataGrid.nextPage();
+	
+	                        // Try creating a last page.
+	                        thePrintView.showPage("last");  
+	
+	                        // If the page holds the remaining data, or if 
+	                        // the last page was completely filled by the last  
+	                        // grid data, queue it for printing.
+	                        // Test if there is data for another 
+	                        // PrintDataGrid page.
+	                        if(!thePrintView.myDataGrid.validNextPage) 
+	                        {
+	                            // This is the last page; 
+	                            // queue it and exit the print loop.
+	                            printJob.addObject(thePrintView);
+	                            break;
+	                        }
+	                        else
+	                        // This is not the last page. Queue a middle page. 
+	                        {
+	                            thePrintView.showPage("middle");
+	                            printJob.addObject(thePrintView);
+	                            thePrintView.pageNumber++;
+	                        }
+	                    }
+	                }
+	                // All pages are queued; remove the FormPrintView 
+	                // control to free memory.
+	                removeChild(thePrintView);
+	            }
+	            // Send the job to the printer.
+	            printJob.send();
+	        }
+			private function editarClick():void{
+				this.disableButtons();
+				if(listaGrid.selectedItem!=null){
+					this.childrens = this.getChildren();
+					removeAllChildren();
+					var object:editarSeleccionado = new editarSeleccionado;
+					//al obtener el objeto no se debe castear!
+					var met:Object = listaMET.getItemAt(listaGrid.selectedIndex);
+					//Alert.show("grid index: "+listaGrid.selectedIndex+" lista size: "+listaMET.length+" rut met: "+met.rut);
+					this.addChild(object );
+					
+					object.cargarMET(met);
+				}
+				else{
+					Alert.show("Error, primero debe seleccionar un elemento!.");
+				}
+			}
+			public function nuevoClick():void{
+				this.childrens = this.getChildren();
+				removeAllChildren();
+				var object:nuevo = new nuevo;
+				this.addChild(object);
+			}
+			private function eliminarClick():void{
+				this.disableButtons();
+				if(listaGrid.selectedItem!=null)
+					Alert.show("¿Desea realmente eliminar el registro?", "Confirmación", Alert.YES|Alert.NO, MetActivo.parent as Sprite, confirmHandler,null, Alert.NO);
+				else{
+					Alert.show("Error, primero debe seleccionar un elemento!.");
+				}
+			}
+			private function confirmHandler(event:CloseEvent):void {
+				if (event.detail == Alert.YES) {
+					var met:Object = listaMET.getItemAt(listaGrid.selectedIndex);
+					
+					c.deleteMET(met.rut);
+					var minuteTimer:Timer = new Timer(1000, 1);
+					minuteTimer.addEventListener(TimerEvent.TIMER_COMPLETE, onTimerComplete);
+					minuteTimer.start();
+					
+				}
+			}
+			private function onTimerComplete(event:TimerEvent):void{
+            	showEvent();
+        	}
+			public function showVerTodos():void{
+				removeAllChildren();
+				//vuelve a insertar todos los hijos guardados
+				var i:int;
+				for(i=0;i<childrens.length;i++){
+					this.addChild(childrens[i]);
+				}
+				//llama al evento que obtiene todos los mets de la bd
+				showEvent();
+			}
+			
+			private function showEvent():void{
+				var c:Conexion = new Conexion;
+				listaMET = c.getAllMets();
+				this.disableButtons();
+			}
+			private function printEvent():void{
+				this.listaGrid.selectedIndex=-1;
+				this.disableButtons();
+				var p:PDF = new PDF( Orientation.PORTRAIT, Unit.MM, Size.A4 );
+				
+				p.addPage();	
+				var archivo:FileReference = new FileReference;
+				archivo.save(p.save(Method.LOCAL), "Lista METs.pdf");
+				
+			}
+			private function enableButtons():void{
+				this.editarButton.enabled=true;
+				this.eliminarButton.enabled=true;
+				this.descargarButton.enabled=true;
+				MetActivo.rutSeleccionado = listaMET.getItemAt(this.listaGrid.selectedIndex).rut;
+			}
+			private function disableButtons():void{
+				this.editarButton.enabled=false;
+				this.eliminarButton.enabled=false;
+				this.descargarButton.enabled=false;
+			}
+			private function descargarClick():void{
+				if(this.listaGrid.selectedIndex==0)
+					this.disableButtons();
+				var request:URLRequest = new URLRequest(); 
+                request.url = "http://www.kimen.cl/amfphp/services/uploads/mets/archivos_"+MetActivo.rutSeleccionado+".rar";
+                
+                var fr:FileReference = new FileReference; 
+                fr.addEventListener(ProgressEvent.PROGRESS, progressHandler);  
+                fr.addEventListener(Event.COMPLETE, completeHandler);  
+                fr.addEventListener(IOErrorEvent.IO_ERROR, error);
+                fr.download(request); 
+               
+                
+			}
+			private function error(event:IOErrorEvent):void{
+				Alert.show("Error, este MET no tiene archivos adjuntos");
+			}
+			private function progressHandler(event:ProgressEvent):void {  
+            	progressBar.setProgress(event.bytesLoaded, event.bytesTotal);
+            	var porcentaje:Number = (Math.round((event.bytesLoaded/event.bytesTotal) * 100) );
+            	progressBar.label = "Descargando " +porcentaje + "%";  
+       		 }
+			private function completeHandler(event:Event):void {  
+	            // loadedStatus = true;  
+	            //progressBar.setProgress(0, 100);  
+	            //btn.enabled = false;  
+	            progressBar.label = "Descarga completa"  
+	         	if(this.listaGrid.selectedIndex==0)
+					this.disableButtons();
+	  
+        	}    
+        	private function fichaClick():void{
+        		this.childrens = this.getChildren();
+				removeAllChildren();
+				var ficha:FichaMET = new FichaMET;
+				this.addChild(ficha);
+				ficha.setData(this.listaMET.getItemAt(listaGrid.selectedIndex));
+        	}
+        	
+        	
+		]]>
+	</mx:Script>
+	<mx:DataGrid x="10" y="37" width="755" height="335" id="listaGrid" dataProvider="{listaMET}"
+		 doubleClickEnabled="true" doubleClick="{editarClick()}" itemClick="{enableButtons()}"
+		  >
+		<mx:columns>
+			<mx:DataGridColumn dataField="archivo" headerText="" width="20" 
+                itemRenderer="mx.controls.Image"/>			
+			<mx:DataGridColumn headerText="Nombres" dataField="nombres" width="120"/>
+			<mx:DataGridColumn headerText="Apellidos" dataField="apellidos" width="120"/>
+			<mx:DataGridColumn headerText="Rut" dataField="rut" width="70"/>
+			<mx:DataGridColumn headerText="Celular" dataField="fono_cel" width="70"/>
+			<mx:DataGridColumn headerText="e-mail" dataField="email" width="80"/>
+			<mx:DataGridColumn headerText="Profesión" dataField="profesion" width="100"/>
+		</mx:columns>
+	</mx:DataGrid>
+	<mx:Text x="10" y="10" text="Lista con todos los METs registrados" fontSize="11"/>
+	<mx:Button x="269" y="380" label="Actualizar tabla" id="actualizarButton" click="{showEvent()}"/>
+	<mx:Button x="152" y="380" label="Imprimir tabla" id="imprimirButton" click="{doPrint()}"/>
+	<mx:Button x="393" y="380" label="Ficha" id="editarButton" click="{fichaClick()}" enabled="false"/>
+	<mx:Button x="703" y="380" label="Nuevo" id="nuevoButton" click="{nuevoClick()}"/>
+	<mx:Button x="623" y="380" label="Eliminar" id="eliminarButton" click="{eliminarClick()}" enabled="false"/>
+	<mx:Button x="457" y="380" label="Descargar documentos" id="descargarButton" click="{descargarClick()}" enabled="false"/>
+	<mx:Text x="555" y="11" text="Buscar por rut:"/>
+	<ns1:AdvancedAutoComplete x="655" y="10" width="110" dataProvider="{listaMET}" labelField="rut"
+		prompt="Ingrese rut" allowMultipleSelection="false" />
+	<mx:ProgressBar x="10" y="380" width="130" id="progressBar" mode="manual" label="Descarga 0%"/>
+</mx:Canvas>

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="755" height="412"
+	 xmlns:ns1="components.*" creationComplete="{init()}" xmlns:ns2="com.hillelcoren.components.*">
+<mx:Script>
+	<![CDATA[
+		import clases.capacitaciones.Alumno;
+		import clases.capacitaciones.DesarrolloDD;
+		import clases.capacitaciones.DD;
+		import mx.collections.ArrayCollection;
+		import clases.MET;
+		import mx.controls.Alert;
+		
+		[Bindable]
+		private var listaRut:ArrayCollection;
+		[Bindable]
+		private var lista:ArrayCollection;
+		[Bindable]
+		private var listaClientes:ArrayCollection;
+		private var c:Conexion;
+		[Bindable]
+		private var currentCodigo:String;
+		[Bindable]
+		private var nextEstado:String = "Actualizar";
+		private var nuevoDesarrolloDD:DesarrolloDD = new DesarrolloDD;
+		private function init():void{
+			c = new Conexion;
+			
+			listaRut = c.getAllMets();
+			MetActivo.componenteActivo =  NuevoAlumno;
+			
+		}
+	
+			
+		
+		private function cancelarClick():void{
+			(this.parent as VerTodosAlumnos).showVerTodos();
+		}
+		
+		private function guardarClick():void{
+			if(checkFields()){
+				var alumno:Alumno = new Alumno;
+				alumno.apellidos = this.apellidosTxtInput.text;
+				alumno.nivel_educacional = this.nivelEducacionalCombo.selectedItem.toString().substr(0,2);
+				alumno.nombres = this.nombresTxtInput.text;
+				alumno.porc_sence = this.senceTxtInput.text;
+				alumno.rut = this.rutInput.text + this.rutInput0.text;
+				alumno.rut_empresa = this.autoComplete.selectedItem.rut;
+				
+				c.updateAlumno(alumno);
+			}else{
+				Alert.show("Error, debe completar todos los campos.");
+			}
+		
+		}
+		private function checkFields():Boolean{
+			if(this.nombresTxtInput.text!="" && this.apellidosTxtInput.text!="" && 
+			this.senceTxtInput.text!="" && 
+			this.autoComplete.selectedItem!=null && this.nombreEmpresaTxt.text!="")
+				return true;
+			return false;
+		}
+		public function cargarAlumno(a:Object, listaClientes:ArrayCollection):void{
+			this.nombresTxtInput.text = a.nombres;
+			this.apellidosTxtInput.text = a.apellidos;
+			this.listaClientes = listaClientes;
+			var rut:String = a.rut;
+			this.rutInput.text = rut.substr(0,rut.length-1);
+			this.rutInput0.text = rut.substr(rut.length-1,1);
+			
+			var nivel:int = a.nivel_educacional;
+			var indice = a.nivel_educacional;
+			this.nivelEducacionalCombo.selectedIndex = indice-1;
+			nivel = a.porc_sence;
+			this.senceTxtInput.text = String(nivel);
+			
+			
+			var i:int;
+			for(i=1;i<this.listaClientes.length;i++){
+				var rut1:String = this.listaClientes.getItemAt(i).rut;
+				
+				var rut2:String = a.rut_empresa;
+				var nombre:String = this.listaClientes.getItemAt(i).nombre;
+				if(rut1==rut2){
+					this.autoComplete.selectedItem=listaClientes.getItemAt(i);
+					this.nombreEmpresaTxt.text = nombre;
+				}
+			}
+			
+		}
+		
+	
+		
+		
+	]]>
+</mx:Script>
+	<mx:Text x="10" y="10" text="Edición de un Diseño y Desarrollo" fontSize="11"/>
+	<mx:Canvas x="10" y="37" width="735" height="335" borderStyle="inset">
+		<mx:Text x="285.75" y="194" text="Nombre:"/>
+		<mx:Text x="139.75" y="10" text="Datos Generales" fontWeight="bold"/>
+		<mx:Text x="139.75" y="168" text="Empresa" fontWeight="bold"/>
+		<mx:Text x="285.75" y="42" text="Nombres:"/>
+		<mx:Text x="117.75" y="98" text="Nivel educaional:"/>
+		<mx:Text x="453.75" y="98" text="Porcentaje SENCE:"/>
+		<mx:TextInput x="453.75" y="124" id="senceTxtInput" width="160" restrict="0-9"/>
+		<mx:TextInput x="285.75" y="220" id="nombreEmpresaTxt" width="160" editable="false"/>
+		<mx:Text x="117.75" y="194" text="Rut: "/>
+		<mx:TextInput x="285.75" y="68" id="nombresTxtInput" width="160"/>
+		<mx:Text x="453.75" y="42" text="Apellidos:"/>
+		<mx:TextInput x="453.75" y="68" id="apellidosTxtInput" width="160"/>
+		<mx:Text x="117.75" y="42" text="Rut"/>
+		<mx:Text x="239.75" y="70" text="-"/>
+		<mx:TextInput x="117.75" y="68" id="rutInput" width="114" maxChars="8" toolTip="ejemplo de rut: 11222333-4" restrict="0-9"/>
+		<mx:TextInput x="255.75" y="68" id="rutInput0" width="22" maxChars="1"/>
+		<ns2:AdvancedAutoComplete id="autoComplete" x="117.75" y="220" width="160" dataProvider="{this.listaClientes}"  labelField="rut"
+			prompt="Ingrese rut" allowMultipleSelection="false" change="{this.nombreEmpresaTxt.text=autoComplete.selectedItem.nombre}"/>
+		<mx:ComboBox id="nivelEducacionalCombo" x="117.25" y="124" width="328.5">
+			<mx:dataProvider>
+				<mx:Array>
+					<mx:String>01: Sin escolaridad</mx:String>
+					<mx:String>02: Básica Incompleta</mx:String>
+					<mx:String>03: Básica Completa</mx:String>
+					<mx:String>04: Media Incompleta</mx:String>
+					<mx:String>05: Media Completa</mx:String>
+					<mx:String>06: Superior técnica profesional incompleta</mx:String>
+					<mx:String>07: Superior técnica profesional completa</mx:String>
+					<mx:String>08: Universidad Incompleta</mx:String>
+					<mx:String>09: Universidad Completa</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+	</mx:Canvas>
+	<mx:Button label="Cancelar" click="{cancelarClick()}" x="590" y="380"/>
+	<mx:Button label="Guardar" id="registrarButton" click="{guardarClick()}" x="673" y="380"/>
+	
+</mx:Canvas>

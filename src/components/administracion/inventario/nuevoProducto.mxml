@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="640" height="385">
+<mx:Script>
+	<![CDATA[
+		import clases.inventario.Producto;
+		import clases.MET;
+		
+		import mx.controls.Alert;
+		
+		
+		private function registrarClick():void{
+			
+			
+			var nuevoProducto:Producto = new Producto;
+			nuevoProducto.descripcion = this.descripcionInput.text;
+			nuevoProducto.nombre = this.nombreInput.text;
+			nuevoProducto.stock_seguridad = this.stockStepper.value;
+			nuevoProducto.unidad = this.unidadInput.text;
+			var c:Conexion = new Conexion;
+			c.insertProducto(nuevoProducto);
+			
+			Alert.show("desc: "+descripcionInput.text+" nom: "+nombreInput.text+" segu: "+stockStepper.value+" unida: "+unidadInput.text);
+		}
+		private function cancelarClick():void{
+			(this.parent as verProductos ).showVerTodos();
+		}
+	]]>
+</mx:Script>
+	<mx:Text x="10" y="10" text="Ingreso de un nuevo producto" fontSize="11"/>
+	
+	<mx:Canvas x="10" y="37" width="626" height="318" borderStyle="inset">
+		<mx:Text x="10" y="10" text="Nombre del producto"/>
+		<mx:TextInput x="10" y="36" id="nombreInput"/>
+		<mx:Text x="307" y="10" text="Descripción"/>
+		<mx:TextInput x="307" y="36" id="descripcionInput" height="58"/>
+		<mx:Text x="11" y="102" text="Unidad de medida"/>
+		
+		<mx:ComboBox x="11" y="128" width="159" id="unidadInput">
+			<mx:dataProvider>
+                <mx:Array id="listaPermisos">
+                	<mx:String>0: Usuario</mx:String>
+                    <mx:String>1: Gte. Capacitación</mx:String>
+                    <mx:String>2: Coordinador CGI</mx:String>
+                    <mx:String>3: Gerencia</mx:String>
+            	</mx:Array>
+        	</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:Text x="307" y="102" text="Stock de seguridad"/>
+		<mx:NumericStepper x="307" y="128" width="112" id="stockStepper"/>
+	</mx:Canvas>
+	<mx:Button x="557" y="363" label="Registrar" id="registrarButton" click="registrarClick()"/>
+	<mx:Button x="474" y="363" label="Cancelar" id="registrarButton0" click="cancelarClick()"/>
+	
+</mx:Canvas>

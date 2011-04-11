@@ -1,0 +1,94 @@
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" label="METs"  width="775" height="412"
+	addedToStage="{showEvent()}"  xmlns:ns1="com.hillelcoren.components.*" xmlns:ns2="com.hillelcoren.components.autoComplete.classes.*">
+	<mx:Script>
+		<![CDATA[
+			import mx.events.CloseEvent;
+			import clases.MET;
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import flash.utils.Timer;
+			
+			[Bindable]
+			private var listaMET:ArrayCollection;
+			private var c:Conexion = new Conexion;
+			private var childrens:Array;
+			
+			private function editarClick():void{
+				if(listaGrid.selectedItem!=null){
+					this.childrens = this.getChildren();
+					removeAllChildren();
+					var object:editarSeleccionado = new editarSeleccionado;
+					//al obtener el objeto no se debe castear!
+					var met:Object = listaMET.getItemAt(listaGrid.selectedIndex);
+					//Alert.show("grid index: "+listaGrid.selectedIndex+" lista size: "+listaMET.length+" rut met: "+met.rut);
+					this.addChild(object );
+					object.cargarMET(met);
+				}
+				else{
+					Alert.show("Error, primero debe seleccionar un elemento!.");
+				}
+			}
+			private function nuevoClick():void{
+				this.childrens = this.getChildren();
+				removeAllChildren();
+				var object:nuevo = new nuevo;
+				this.addChild(object);
+			}
+			private function eliminarClick():void{
+				if(listaGrid.selectedItem!=null)
+					Alert.show("¿Desea realmente eliminar el registro?", "Confirmación", Alert.YES|Alert.NO, MetActivo.parent as Sprite, confirmHandler,null, Alert.NO);
+				else{
+					Alert.show("Error, primero debe seleccionar un elemento!.");
+				}
+			}
+			private function confirmHandler(event:CloseEvent):void {
+				if (event.detail == Alert.YES) {
+					var met:Object = listaMET.getItemAt(listaGrid.selectedIndex);
+					
+					c.deleteMET(met.rut);
+					var minuteTimer:Timer = new Timer(1000, 1);
+					minuteTimer.addEventListener(TimerEvent.TIMER_COMPLETE, onTimerComplete);
+					minuteTimer.start();
+					
+				}
+			}
+			private function onTimerComplete(event:TimerEvent):void{
+            	showEvent();
+        	}
+			public function showVerTodos():void{
+				removeAllChildren();
+				//vuelve a insertar todos los hijos guardados
+				var i:int;
+				for(i=0;i<childrens.length;i++){
+					this.addChild(childrens[i]);
+				}
+				//llama al evento que obtiene todos los mets de la bd
+				showEvent();
+			}
+			
+			private function showEvent():void{
+				var c:Conexion = new Conexion;
+				listaMET = c.getAllMets();
+			}
+		]]>
+	</mx:Script>
+	<mx:DataGrid x="10" y="37" width="755" height="313" id="listaGrid" dataProvider="{listaMET}">
+		<mx:columns>
+			<mx:DataGridColumn headerText="Nombre" dataField="nombres" width="120"/>
+			<mx:DataGridColumn headerText="Apellido" dataField="apellidos" width="120"/>
+			<mx:DataGridColumn headerText="Rut" dataField="rut" width="70"/>
+			<mx:DataGridColumn headerText="Fono" dataField="fono_particular" width="70"/>
+			<mx:DataGridColumn headerText="Fecha ingreso" dataField="fecha" width="80"/>
+			<mx:DataGridColumn headerText="Permisos(*)" dataField="permiso" width="100"/>
+		</mx:columns>
+	</mx:DataGrid>
+	<mx:Text x="10" y="10" text="Lista con todos los Head Hunters registrados" fontSize="11"/>
+	<mx:Text x="10" y="358" text="(*) Permisos:&#xa;0: Usuario, 1: Gte Capacitación&#xa;2: Coordinador CGI, 3: Gerencia" width="192" height="44"/>
+	<mx:Button x="431" y="356" label="Actualizar tabla" click="{showEvent()}"/>
+	<mx:Button x="635" y="356" label="Editar" click="{editarClick()}"/>
+	<mx:Button x="703" y="356" label="Nuevo" click="{nuevoClick()}"/>
+	<mx:Button x="555" y="356" label="Eliminar" click="{eliminarClick()}"/>
+	<mx:Text x="555" y="11" text="Buscar por rut:"/>
+	<ns1:AdvancedAutoComplete x="655" y="10" width="110" dataProvider="{listaMET}" labelField="rut"
+		prompt="Ingrese rut" allowMultipleSelection="false" />
+</mx:Canvas>

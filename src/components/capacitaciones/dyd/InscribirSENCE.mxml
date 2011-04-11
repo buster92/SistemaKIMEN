@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" title="Inscripción SENCE" layout="absolute" width="252" 
+	height="346" defaultButton="{inscribirButton}"  borderColor="#F49821" borderAlpha="0.7" creationComplete="onShow()" >
+	<mx:Script>
+		<![CDATA[
+			import mx.controls.Alert;
+			import mx.managers.PopUpManager;
+			
+			private function onShow():void{
+				this.fecha.selectedDate = new Date();
+				this.responsable.text = MetActivo.nombres;
+				dateFieldInit(this.fecha);
+			}
+			public function setCodigoDD(codigo:Object):void{
+				this.codigoDD.text = String(codigo);
+			}
+			private function cambiarClick():void{
+				if(this.codigoTxtInput.text!=""){
+					var c:Conexion = new Conexion;
+					c.inscribirSENCE(this.codigoDD.text, MetActivo.rut, this.fecha.text, this.codigoTxtInput.text);
+				}
+				else{
+					Alert.show("Error, debe ingresar un código SENCE!");
+				}
+				
+			}
+			
+			private function dateFieldInit(date:DateField):void {
+       		date.dayNames=['Dom', 'Lun', 'Mar', 
+       		'Mie', 'Jue', 'Vie', 'Sab'];
+       		date.monthNames=['Enero','Febrero','Marzo','Abril',
+            'Mayo','Junio','Julio','Agosto','Septiembre',
+            'Octubre','Noviembre','Diciembre'];
+              	
+            date.firstDayOfWeek = 1;
+            date.selectedDate = (new Date());
+            date.formatString="DD/MM/YYYY" ;
+               
+  		}
+		]]>
+	</mx:Script>
+	<mx:Button x="148" y="274" label="Inscribir" id="inscribirButton" click="{cambiarClick()}"/>
+	<mx:Button x="65" y="274" label="Cancelar" id="cancelarButton" />
+	<mx:Text x="10" y="66" text="Responsable:"/>
+	<mx:Text x="10" y="122" text="Fecha:"/>
+	<mx:TextInput x="31" y="92" width="140" id="responsable" enabled="false"/>
+	<mx:Text x="10" y="10" text="Código DyD:"/>
+	<mx:TextInput x="31" y="36" width="140" id="codigoDD" enabled="false"/>
+	<mx:Text x="10" y="177" text="Código asignado:"/>
+	<mx:TextInput x="31" y="202" width="140" id="codigoTxtInput" toolTip="&quot;código asignado por SENCE&quot;"/>
+	<mx:DateField x="31" y="147" width="140" id="fecha" enabled="true"/>
+	
+</mx:Panel>

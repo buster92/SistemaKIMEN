@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" title="Calificar alumno(s)" layout="absolute" width="800" 
+	height="538" defaultButton="{agregarButton}"  borderColor="#F49821" borderAlpha="0.7" creationComplete="onShow()" >
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.managers.PopUpManager;
+			[Bindable]
+			public var listaAlumnos:ArrayCollection;
+			private var c:Conexion;
+			
+			public function onShow():void{
+				c = new Conexion;
+				listaAlumnos = c.getAllAlumno();
+				
+			}
+			
+			
+  			private function enableButtons():void{
+  				this.agregarButton.enabled = true;
+  			}
+		]]>
+	</mx:Script>
+	<mx:Button x="212" y="435" label="Agregar" id="agregarButton" enabled="false"/>
+	<mx:Button x="129" y="435" label="Volver" id="cancelarButton" />
+	<mx:DataGrid x="10" y="10" width="365" height="400" id="listaGrid" dataProvider="{listaAlumnos}"
+	itemClick="{enableButtons()}" allowMultipleSelection="true" doubleClickEnabled="true">
+		<mx:columns>
+			<mx:DataGridColumn headerText="Nombres" dataField="nombres" width="100"/>
+			<mx:DataGridColumn headerText="Apellidos" dataField="apellidos" width="100"/>
+			<mx:DataGridColumn headerText="Rut" dataField="rut" width="70"/>
+			
+		</mx:columns>
+	</mx:DataGrid>
+	
+</mx:Panel>

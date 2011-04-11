@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="775" height="412">
+<mx:Script>
+	<![CDATA[
+		import clases.MET;
+		import mx.controls.Alert;
+		
+		private var met:MET;
+		private var rutAntiguo:String;
+		private function cancelarClick():void{
+			(this.parent as headHunters ).showVerTodos();
+		}
+		private function guardarClick():void{
+		//Alert.show("rut: "+this.rutInput.text.toString());
+			var rut:String = this.rutInput.text + this.rutInput0.text.toUpperCase();
+			this.met.alergias = this.alergiasInput.text;
+			this.met.apellidos = this.apellidoInput.text;
+			this.met.banco = this.bancoInput.text;
+			this.met.contacto_emerg = this.contactoEmergInput.text;
+			this.met.cuenta_cte = parseInt(this.cuentaInput.text) ;
+			this.met.direccion = this.direccionInput.text;
+			this.met.direccion_emerg = this.direccionEmergInput.text;
+			this.met.fono_cel = this.fonoCelularInput.text;
+			this.met.fono_emerg = this.fonoEmergInput.text;
+			this.met.fono_particular = this.fonoParticularInput.text;
+			this.met.grupo_sangre = this.grupoEmergInput.text
+			this.met.nombres = this.nombreInput.text;
+			this.met.permiso = this.permisosInput.selectedIndex;
+			this.met.profesion = this.profesionInput.text;
+			if(this.programable.selected)
+				this.met.programable = 1;
+			else
+				this.met.programable = 0;
+			this.met.relacion_emerg = this.relacionEmergInput.text;
+			this.met.rut = rut
+			if(this.rutAntiguo!=rut)
+				this.met.contrasena = rut;
+			var c:Conexion = new Conexion;
+			if(c.updateMET(this.rutAntiguo, this.met)==0)
+				this.cancelarClick();
+		}
+		//carga el met ingresado en la tabla
+		public function cargarMET(met:Object):void{
+			//guarda al met, su rut antiguo y su contrasena
+			this.met= new MET(met.rut);
+			this.met.contrasena = met.contrasena;
+			this.rutAntiguo = met.rut;
+			//carga los datos en la tabla
+			this.rutInput.text = met.rut;			
+			this.alergiasInput.text = met.alergias;
+			this.apellidoInput.text = met.apellidos;
+			this.bancoInput.text = met.banco;
+			this.contactoEmergInput.text = met.contacto_emerg;
+			this.cuentaInput.text = met.cuenta_cte;
+			this.direccionInput.text = met.direccion;
+			this.direccionEmergInput.text = met.direccion_emerg;
+			this.fonoCelularInput.text = met.fono_cel;
+			this.fonoEmergInput.text = met.fono_emerg;
+			this.fonoParticularInput.text = met.fono_particular;
+			this.grupoEmergInput.text = met.grupo_sangre;
+			this.nombreInput.text = met.nombres;
+			this.permisosInput.selectedIndex = met.permiso;
+			this.profesionInput.text = met.profesion;
+			if(met.programable == 1)
+				this.programable.selected=true;
+			else
+				this.programable.selected=false;
+				
+			this.relacionEmergInput.text = met.relacion_emerg;
+			
+		}
+	]]>
+</mx:Script>
+	<mx:Text x="10" y="10" text="Edición de un MET" fontSize="11"/>
+	<mx:Button x="693" y="381" label="Guardar" id="registrarButton" click="guardarClick()"/>
+	<mx:Button x="610" y="380" label="Cancelar" click="cancelarClick()"/>
+	<mx:Canvas x="10" y="37" width="755" height="336" borderStyle="inset">
+		<mx:Text x="10" y="10" text="Nombres"/>
+		<mx:TextInput x="10" y="36" width="160" id="nombreInput"/>
+		<mx:Text x="10" y="66" text="Apellidos"/>
+		<mx:TextInput x="10" y="92" id="apellidoInput"/>
+		<mx:Text x="10" y="122" text="Rut"/>
+		<mx:Text x="10" y="178" text="Direccion"/>
+		<mx:TextInput x="10" y="204" id="direccionInput"/>
+		<mx:Text x="10" y="234" text="Fono particular"/>
+		<mx:TextInput x="10" y="260" id="fonoParticularInput"/>
+		<mx:Text x="178" y="10" text="Fono celular"/>
+		<mx:TextInput x="178" y="36" id="fonoCelularInput"/>
+		<mx:Text x="178" y="66" text="Profesión"/>
+		<mx:TextInput x="178" y="92" id="profesionInput"/>
+		<mx:Text x="178" y="122" text="N° cuenta corriente"/>
+		<mx:TextInput x="178" y="148" id="cuentaInput"/>
+		<mx:Text x="178" y="178" text="Banco"/>
+		<mx:TextInput x="178" y="204" id="bancoInput"/>
+		<mx:Text x="346" y="10" text="Permisos"/>
+		<mx:Text x="178" y="234" text="Alergias"/>
+		<mx:TextInput x="178" y="260" id="alergiasInput"/>
+		<mx:CheckBox x="346" y="92" label="Programable" width="160" id="programable"/>
+		<mx:ComboBox x="346" y="36" width="159" id="permisosInput">
+			<mx:dataProvider>
+			          <mx:Array id="listaPermisos">
+			          	<mx:String>0: Usuario</mx:String>
+			              <mx:String>1: Gte. Capacitación</mx:String>
+			              <mx:String>2: Coordinador CGI</mx:String>
+			              <mx:String>3: Gerencia</mx:String>
+			          </mx:Array>
+			  	</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:Canvas x="558" y="7" width="183" height="318" borderStyle="inset">
+			<mx:Text x="10" y="10" text="En caso de emergencias:"/>
+			<mx:Text x="10" y="36" text="Contacto"/>
+			<mx:TextInput x="10" y="62" id="contactoEmergInput"/>
+			<mx:Text x="10" y="92" text="Relación"/>
+			<mx:TextInput x="10" y="118" id="relacionEmergInput"/>
+			<mx:Text x="10" y="148" text="Dirección"/>
+			<mx:TextInput x="10" y="174" id="direccionEmergInput"/>
+			<mx:Text x="10" y="204" text="Fono"/>
+			<mx:TextInput x="10" y="230" id="fonoEmergInput"/>
+			<mx:Text x="10" y="256" text="Grupo de sangre"/>
+			<mx:TextInput x="10" y="282" id="grupoEmergInput"/>
+		</mx:Canvas>
+		<mx:Text x="132" y="150" text="-"/>
+		<mx:TextInput x="10" y="148" id="rutInput" width="114" maxChars="8" toolTip="ejemplo de rut: 11222333-4"/>
+		<mx:TextInput x="150" y="148" id="rutInput0" width="22" maxChars="1"/>
+	</mx:Canvas>
+	
+</mx:Canvas>

@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="755" height="542"
+	 xmlns:ns1="components.*" creationComplete="init()">
+<mx:Script>
+	<![CDATA[
+		import mx.rpc.events.ResultEvent;
+		import mx.rpc.http.mxml.HTTPService;
+		import clases.capacitaciones.*;
+		import mx.collections.ArrayCollection;
+		import clases.MET;
+		import mx.controls.Alert;
+		
+		[Bindable]
+		private var listaMET:ArrayCollection;
+		[Bindable]
+		private var lista:ArrayCollection;
+		private var c:Conexion;
+		[Bindable]
+		private var currentCodigo:String;
+		
+		private var emailService:HTTPService =  new HTTPService;
+		private function init():void{
+			c = new Conexion;
+			
+			listaMET = c.getAllMets();
+			MetActivo.componenteActivo =  NuevoDyD;
+			MetActivo.rutSeleccionado = MetActivo.rut;
+			
+			this.responsableTxtInput.text = MetActivo.nombres;
+			this.fechaDateField.selectedDate = new Date();
+			dateFieldInit(fechaDateField);
+			dateFieldInit(this.fecha0);
+			dateFieldInit(this.fecha1);
+			dateFieldInit(this.fecha2);
+			dateFieldInit(this.fecha3);
+			dateFieldInit(this.fecha4);
+			//this.fechaIngresoInput.selectedDate = new Date;
+			//this.fechaNacimientoInput.selectedDate = new Date;
+			
+			getMaxDD("ADM");
+			emailService.url = "http://www.kimen.cl/amfphp/services/email.php";
+			emailService.method="POST"; 
+			emailService.resultFormat="xml";
+			emailService.addEventListener(ResultEvent.RESULT, emailResult);
+			
+			emailService.useProxy=false;
+			if(MetActivo.permiso=="Gerencia")
+				this.estadoCombo.enabled = true;
+		}
+		private function getMaxDD(tipo:String):void{
+			lista = c.getMaxDD(tipo);
+			var minuteTimer:Timer = new Timer(2000, 1);
+			minuteTimer.addEventListener(TimerEvent.TIMER_COMPLETE, onTimerComplete);
+			minuteTimer.start();
+		}
+			
+		private function onTimerComplete(event:TimerEvent):void{
+			var string:String;
+			if(lista.getItemAt(0).max_codigo !=null){
+				//Alert.show(String(lista.getItemAt(0).max_codigo.toString()).substr(3,4));
+				string = String(lista.getItemAt(0).max_codigo.toString()).substr(3,4);
+				this.codigoTxtInput.text = String(int(string)+1);
+				//relleno con ceros a la izq los numeros de menos de 4 digitos
+				var i:int;
+				for(i=codigoTxtInput.text.length;i<4;i++){
+					codigoTxtInput.text = "0"+codigoTxtInput.text;
+				}
+				
+			}
+			else{
+				this.codigoTxtInput.text = "0001";
+			}
+           	this.currentCodigo = this.codigoCombo.selectedItem.toString()+codigoTxtInput.text;
+       	}
+		
+		//formatea los datefield al formato dd/mm/aaaa
+		private function dateFieldInit(date:DateField):void {
+       		date.dayNames=['Dom', 'Lun', 'Mar', 
+       		'Mie', 'Jue', 'Vie', 'Sab'];
+       		date.monthNames=['Enero','Febrero','Marzo','Abril',
+            'Mayo','Junio','Julio','Agosto','Septiembre',
+            'Octubre','Noviembre','Diciembre'];
+              	
+            date.firstDayOfWeek = 1;
+            date.selectedDate = (new Date());
+            date.formatString="DD/MM/YYYY" ;
+               
+  		}
+		
+		private function cancelarClick():void{
+			(this.parent as VerTodosDyD).showVerTodos();
+		}
+		
+		private function registrarClick():void{
+			if(this.nombreTxtInput.text!="" || this.nombreTxtInput.text==null){
+				var nuevoDD:DD = new DD;
+				nuevoDD.codigo_interno =this.currentCodigo;
+				nuevoDD.descripcion = this.descripcionTxtArea.text;
+				nuevoDD.estado = this.estadoCombo.selectedItem.toString();
+				nuevoDD.fecha = this.fechaDateField.text;
+				nuevoDD.nombre = this.nombreTxtInput.text;
+				nuevoDD.responsable_rut = MetActivo.rut;
+				nuevoDD.version = this.versionTxtInput.text;
+				this.c.insertDD(nuevoDD);
+				
+				var nuevaPlanifDD:PlanificacionDD = new PlanificacionDD;
+				nuevaPlanifDD.fecha0 = this.fecha0.text;
+				nuevaPlanifDD.fecha1 = this.fecha1.text;
+				nuevaPlanifDD.fecha2 = this.fecha2.text;
+				nuevaPlanifDD.fecha3 = this.fecha3.text;
+				nuevaPlanifDD.fecha4 = this.fecha4.text;
+				nuevaPlanifDD.id_dd = this.currentCodigo;
+				//Alert.show("rut "+listaMET.getItemAt(responsableCombo0.selectedIndex).rut);
+				nuevaPlanifDD.responsable_rut0 = listaMET.getItemAt(responsableCombo0.selectedIndex).rut;
+				nuevaPlanifDD.responsable_rut1 = listaMET.getItemAt(responsableCombo1.selectedIndex).rut;
+				nuevaPlanifDD.responsable_rut2 = listaMET.getItemAt(responsableCombo2.selectedIndex).rut;
+				nuevaPlanifDD.responsable_rut3 = listaMET.getItemAt(responsableCombo3.selectedIndex).rut;
+				nuevaPlanifDD.responsable_rut4 = listaMET.getItemAt(responsableCombo4.selectedIndex).rut;
+				this.c.insertPlanifDD(nuevaPlanifDD);
+			
+				var nuevoDesarrolloDD:DesarrolloDD = new DesarrolloDD();
+				nuevoDesarrolloDD.id_dd = this.currentCodigo;
+				this.c.insertDesarroDD(nuevoDesarrolloDD);
+				//envia mail a los involucrados
+				
+				var nombre:String = this.nombreTxtInput.text;
+				var tarea0:String = "Ejecución del diseño y desarrollo";
+				var tarea1:String = "Revisión del diseño y desarrollo";
+				var tarea2:String =  "Verificación del diseño y desarrollo";
+				var tarea3:String = "Validación del diseño y desarrollo";
+				var tarea4:String = "Inscripción SENCE";
+				if(listaMET.getItemAt(responsableCombo0.selectedIndex).permiso=="Usuario Externo")
+				{
+					var email0:String = listaMET.getItemAt(responsableCombo0.selectedIndex).email;
+					sendEmail(email0, nombre, tarea0, this.fecha0.text);
+				}
+				if(listaMET.getItemAt(responsableCombo1.selectedIndex).permiso=="Usuario Externo")
+				{
+					var email1:String = listaMET.getItemAt(responsableCombo1.selectedIndex).email;
+					sendEmail(email1, nombre, tarea1, this.fecha1.text);
+				}
+				if(listaMET.getItemAt(responsableCombo2.selectedIndex).permiso=="Usuario Externo")
+				{
+					var email2:String = listaMET.getItemAt(responsableCombo2.selectedIndex).email;
+					sendEmail(email2, nombre, tarea2, this.fecha2.text);
+				}
+				if(listaMET.getItemAt(responsableCombo3.selectedIndex).permiso=="Usuario Externo")
+				{
+					var email3:String = listaMET.getItemAt(responsableCombo3.selectedIndex).email;
+					sendEmail(email3, nombre, tarea3, this.fecha3.text);
+				}
+				if(listaMET.getItemAt(responsableCombo4.selectedIndex).permiso=="Usuario Externo")
+				{
+					var email4:String = listaMET.getItemAt(responsableCombo4.selectedIndex).email;
+					sendEmail(email4, nombre, tarea4, this.fecha4.text);
+				}
+				Alert.show("Se ha enviado un correo a los involucrados");
+			}
+			else{
+				Alert.show("Error, debe asignar un nombre al Diseño y Desarrollo");
+			}
+			
+		}
+		public function sendEmail(toEmail:String, nombreDD:String, tarea:String, fecha:String):void{
+			var c:Conexion = new Conexion;
+            var senderName:String = MetActivo.nombres;//"KIMEN Administración";
+            var senderEmail:String = MetActivo.email;//"admin@kimen.cl";
+            var sendToName:String = "MET";
+            var sendToEmail:String = toEmail;
+            var emailMessage:String = "Se le ha asignado la tarea de: "+tarea+", para el: "+fecha+".\n" + 
+            		"Favor revisar el Diseño y Desarrollo: "+nombreDD;
+        
+            c.gateway.call("email.send", new Responder(emailResult,emailResult),
+            senderName, senderEmail, sendToName, sendToEmail, emailMessage);
+        
+           
+        }    
+        
+        public function emailResult(event:ResultEvent):void{
+        	
+            
+        }
+		private function getFormattedDate(date:Date):String{
+			var finalDate:String;
+			finalDate = date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
+			//Alert.show("fecha: "+finalDate);
+			return finalDate;
+		}
+		private function nuevoRegistroClick():void{
+			(this.parent as VerTodosDyD).nuevoClick();	
+		}
+	]]>
+</mx:Script>
+	<mx:Button x="462" y="510" label="Cancelar" click="{cancelarClick()}"/>
+	<mx:Text x="10" y="10" text="Registro de un nuevo Diseño y Desarrollo" fontSize="11"/>
+	<mx:Button x="666" y="510" label="Registrar" id="registrarButton" click="{registrarClick()}"/>
+	<mx:Button x="545" y="510" label="Nuevo Registro" id="registrarButton0" click="{nuevoRegistroClick()}"/>
+	<mx:Canvas x="10" y="37" width="735" height="465" borderStyle="inset">
+		<mx:ComboBox x="419" y="36" width="75" id="codigoCombo"
+			 change="{this.getMaxDD(codigoCombo.selectedItem.toString())}" >
+			<mx:dataProvider>
+				<mx:Array id="listaPermisos0">
+					<mx:String>ADM</mx:String>
+			    	<mx:String>DPO</mx:String>
+					<mx:String>ISG</mx:String>
+					<mx:String>RNA</mx:String>
+					<mx:String>OTR</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:Text x="123" y="10" text="Datos Generales" fontWeight="bold"/>
+		<mx:Text x="123" y="269" text="Planificación" fontWeight="bold"/>
+		<mx:Text x="359" y="38" text="Código:"/>
+		<mx:Text x="101" y="68" text="Fecha:"/>
+		<mx:Text x="359" y="68" text="Estado:"/>
+		<mx:Text x="101" y="98" text="Responsable:"/>
+		<mx:Text x="101" y="128" text="Descripción:"/>
+		<mx:Text x="101" y="38" text="Nombre:"/>
+		<mx:Text x="504" y="38" text="-"/>
+		<mx:TextInput x="524" y="36" width="75" id="codigoTxtInput" editable="false" enabled="false"/>
+		<mx:TextInput x="191" y="96" width="160" id="responsableTxtInput" editable="false" enabled="false"/>
+		<mx:Text x="359" y="98" text="Versión:"/>
+		<mx:TextInput x="418" y="96" width="181" id="versionTxtInput" />
+		<mx:ComboBox x="419" y="66" width="180" id="estadoCombo" enabled="false">
+			<mx:dataProvider>
+				<mx:Array >
+					<mx:String>En ejecución</mx:String>
+			    	<mx:String>En revisión</mx:String>
+					<mx:String>En verificación</mx:String>
+					<mx:String>En validación</mx:String>
+					<mx:String>TLEC</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		
+		<mx:DateField x="191" y="66" width="157" id="fechaDateField" enabled="false"/>
+		<mx:TextInput x="191" y="36" id="nombreTxtInput"/>
+		<mx:TextArea x="191" y="126" id="descripcionTxtArea" borderStyle="inset" wordWrap="true" height="66" width="408"/>
+		<mx:Grid x="101" y="295" width="498" horizontalGap="10" verticalGap="5">
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:Text text="Descripción" fontSize="10" fontWeight="bold"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:Text text="Responsable" fontSize="10" fontWeight="bold"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:Text text="Plazo" fontSize="10" fontWeight="bold"/>
+				</mx:GridItem>
+			</mx:GridRow>
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%">
+					<mx:Text text="Ejecución del Diseño y Desarrollo" fontSize="10"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:ComboBox width="130" id="responsableCombo0" labelField="nombres" dataProvider="{listaMET}" editable="false" />
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:DateField id="fecha0" width="100"/>
+				</mx:GridItem>
+			</mx:GridRow>
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%">
+					<mx:Text text="Revisión del Diseño y Desarrollo" fontSize="10"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:ComboBox width="130" id="responsableCombo1" labelField="nombres" dataProvider="{listaMET}" />
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:DateField id="fecha1" width="100"/>
+				</mx:GridItem>
+			</mx:GridRow>
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%">
+					<mx:Text text="Verificación del Diseño y Desarrollo" fontSize="10"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:ComboBox width="130" id="responsableCombo2" labelField="nombres" dataProvider="{listaMET}" />
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:DateField id="fecha2" width="100"/>
+				</mx:GridItem>
+			</mx:GridRow>
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%">
+					<mx:Text text="Validación del Diseño y Desarrollo" fontSize="10"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:ComboBox width="130" id="responsableCombo3" labelField="nombres" dataProvider="{listaMET}" />
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:DateField id="fecha3" width="100"/>
+				</mx:GridItem>
+			</mx:GridRow>
+			<mx:GridRow width="100%" height="100%">
+				<mx:GridItem width="100%" height="100%">
+					<mx:Text text="Inscripción SENCE" fontSize="10"/>
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:ComboBox width="130" id="responsableCombo4" labelField="nombres" dataProvider="{listaMET}" />
+				</mx:GridItem>
+				<mx:GridItem width="100%" height="100%" horizontalAlign="center">
+					<mx:DateField id="fecha4" width="100"/>
+				</mx:GridItem>
+			</mx:GridRow>
+		</mx:Grid>
+		<ns1:SubirArchivo x="101" y="200" 
+			filename="{this.currentCodigo}" 
+			folder="dyd" errorMessage="Error, debe ingresar el código correctamente">
+		</ns1:SubirArchivo>
+		
+	</mx:Canvas>
+	
+</mx:Canvas>

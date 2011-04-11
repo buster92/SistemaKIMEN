@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="800" height="500" creationComplete="creationCompleteHandler()" borderColor="#F49821" borderStyle="inset" xmlns:mets="components.administracion.mets.*" xmlns:inventario="components.administracion.inventario.*" xmlns:headHunters="components.administracion.headHunters.*" xmlns:dyd="components.capacitaciones.dyd.*" xmlns:cursos="components.capacitaciones.cursos.*" xmlns:alumnos="components.capacitaciones.alumnos.*">
+	<mx:Script>
+		<![CDATA[
+			public var currentTab:int=0;
+			
+			private function creationCompleteHandler():void {
+	            this.id ="administracionComponent";
+         	}  
+         	private function tabClick():void{
+         		currentTab = tab.selectedIndex;
+         	}
+		]]>
+	</mx:Script>
+	<mx:TabNavigator x="10" y="42" width="777" height="445" id="tab" click="tabClick()">
+		<mx:Canvas label="Diseño y Desarrollo" height="100%">
+			<dyd:VerTodosDyD id="tabVerTodosDyD" x="0" y="0"/>			
+		</mx:Canvas>
+		<mx:Canvas label="Cursos" width="100%" height="100%">
+			<cursos:VerTodosCursos id="tabVerTodosCursos" x="0" y="0"/>
+		</mx:Canvas>
+		<mx:Canvas label="Alumnos" width="100%" height="100%">
+			<alumnos:VerTodosAlumnos id="tabVerTodosAlumnos" x="0" y="0"/>
+		</mx:Canvas>
+		
+	</mx:TabNavigator>
+	<mx:Text x="10" y="10" text="Capacitaciones" fontSize="15" width="776" fontWeight="bold" textAlign="center"/>
+	
+</mx:Canvas>

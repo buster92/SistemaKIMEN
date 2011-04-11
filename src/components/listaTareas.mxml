@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="215" height="500" borderColor="#F49821" borderStyle="inset" enabled="false" xmlns:local="*">
+	<mx:Script>
+		<![CDATA[
+			import mx.controls.Alert
+			private function calcRowColor(item:Object, rowIndex:int, dataIndex:int, color:uint):uint{
+				var fecha:Date = new Date;
+				var actual:Date = new Date;
+				var s:Array;
+		    	s = item.fecha_tope.split("/");
+		    	fecha.fullYear = s[2];
+		    	fecha.month = s[1]-1;
+		    	fecha.date = s[0];
+				if(actual.getTime()>fecha.getTime())
+					return 0xFF2020;
+			    return color;
+			 }
+		]]>
+	</mx:Script>
+	<mx:Array id="dp">
+		<!--
+        <mx:Object descripcion="tomar curso utalca" responsable="andres" fecha_tope="3/11/2010"/>
+        <mx:Object descripcion="cerrar el ultimo proyecto" responsable="Alex" fecha_tope="29/8/2010"/>
+        <mx:Object descripcion="evaluar curso capacitación" responsable="Julio" fecha_tope="3/11/2010"/>
+        <mx:Object descripcion="diseñar nuevo curso" responsable="andres" fecha_tope="3/11/2010"/>
+        <mx:Object descripcion="evaluar alumnos curso 023" responsable="Alex" fecha_tope="5/9/2010"/>
+        -->
+    </mx:Array>
+    
+	<mx:VBox x="0" y="0" width="100%" height="100%" horizontalAlign="center">
+		<mx:Text text="Tareas Pendientes" fontSize="15" fontWeight="bold" paddingTop="8"/>
+		<mx:Canvas width="195" height="450">
+			<local:RowColorDataGrid height="434" dataProvider="{dp}" rowColorFunction="calcRowColor">
+				<local:columns>
+				
+					<!-- LAS TAREAS ATRASADAS SE DEBEN MARCAR CON ROJO -->
+			
+					<mx:DataGridColumn headerText="Descripción" dataField="descripcion" width="110"/>
+					<mx:DataGridColumn headerText="Responsable" dataField="responsable" width="85"/>
+					<mx:DataGridColumn headerText="Fecha tope" dataField="fecha_tope" width="100"/>
+				</local:columns>
+			</local:RowColorDataGrid>
+		</mx:Canvas>
+	</mx:VBox>
+	
+</mx:Canvas>

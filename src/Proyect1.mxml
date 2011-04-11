@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml"
+        layout="vertical"
+        verticalAlign="middle" horizontalAlign="center"
+        backgroundColor="white" xmlns:components="components.*" creationComplete="init()"
+        xmlns:administracion="components.administracion.*" xmlns:consultorias="components.consultorias.*"
+        xmlns:capacitaciones="components.capacitaciones.*">
+
+    
+
+    <mx:Script>
+        <![CDATA[
+            import mx.events.ItemClickEvent;
+            import mx.managers.PopUpManager;
+            import components.*;
+            import clases.*;
+            import clases.RemotingConnection;
+            import mx.controls.Alert;
+            import flash.net.Responder;
+            import mx.collections.ArrayCollection;
+            
+            private var sesion:sesionPanel = new sesionPanel();
+            [Bindable]
+            private var listaMET:ArrayCollection = new ArrayCollection();
+            
+            private function toggleButtonBar_itemClick(evt:ItemClickEvent):void {
+                currentState = evt.item.data;
+            }
+			public function loginCall() : void{
+				var c:Conexion = new Conexion;
+				
+				var user:String = sesion.userInput.text.toUpperCase();
+				var pass:String = sesion.userPass.text;
+				if(user!="" && pass!="") {
+					c.gateway.call( "administracion.loginAdmin", new Responder(onResult, onFault),user,pass);
+
+	            } else {
+	            	Alert.show("Debe rellenar todos los campos");
+	            }
+			}
+         	public function onResult( result : Object ) : void{
+            	
+            	if(result!=0) {
+               		Alert.show("Usuario o contraseña incorrectas");
+
+            	}
+            	else{
+            		var i:int;
+	            	for(i=0;i<listaMET.length;i++){
+	            		var user:String = sesion.userInput.text.toUpperCase();
+	            		var rut:String = (listaMET.getItemAt(i)).rut;
+	            		var permiso:String = (listaMET.getItemAt(i)).permiso;
+	            		var tipo:String = (listaMET.getItemAt(i)).tipo;
+	            		if(user == rut){
+	            			
+	            			if(permiso!="Usuario Externo" && tipo!="Ex MET"){
+		            			MetActivo.rut=rut;
+		            			MetActivo.nombres = listaMET.getItemAt(i).nombres;
+		            			MetActivo.apellidos = listaMET.getItemAt(i).apellidos;
+		            			MetActivo.parent = this;
+		            			MetActivo.contrasena = listaMET.getItemAt(i).contrasena;
+		            			MetActivo.email = listaMET.getItemAt(i).email;
+		            			MetActivo.permiso = listaMET.getItemAt(i).permiso; 
+		            			PopUpManager.removePopUp(sesion);
+				                this.toggleButtonBar.enabled=true;
+				                this.currentState = "planificacion";
+				                if(MetActivo.permiso=="Usuario"){
+				                	this.planificacionComp.tabla.editable = false;
+				                	this.planificacionComp.guardar.enabled = false;
+				                }
+				                this.planificacionComp.enabled=true;
+				                this.listaTareasComp.enabled=true;
+				                this.usuarioTexto.text = MetActivo.nombres+" "+MetActivo.apellidos+"";
+				                
+				         	}
+				            else{
+		            			Alert.show("No tiene permisos para acceder");
+		            		}
+			                return
+	            		}
+	            		
+	            			//Alert.show("mal rut: "+rut+" input "+sesion.userInput.text+" pass: "+contraseña+" input "+sesion.userPass.text);
+	            	}
+            	}
+	         }
+	
+	         public function onFault( fault : Object ) : void{
+	            Alert.show("Fallo en la conexión a Internet");
+	            
+	         }
+            private function closePopUpIniciar(evt:MouseEvent):void {
+            	this.loginCall();
+	               
+	        }
+	       	private function closePopUpCancelar(evt:MouseEvent):void {
+	                PopUpManager.removePopUp(sesion);
+	                this.currentState = "planificacion";
+	        }
+	        
+            private function init():void{
+                //se conecta con AMFPHP                
+				var c:Conexion = new Conexion;
+				
+				listaMET = c.getAllMets();
+            	//despliega el inicio de sesion
+            	PopUpManager.addPopUp(sesion, this, true);
+                PopUpManager.centerPopUp(sesion);
+                sesion.iniciarButton.addEventListener(MouseEvent.CLICK, closePopUpIniciar);
+            	sesion.cancelarButton.addEventListener(MouseEvent.CLICK, closePopUpCancelar);
+            	
+			}	
+			private function cambiaClaveClick():void{
+				var cc:cambiarClave = new cambiarClave;
+				PopUpManager.addPopUp(cc, this, true);
+				PopUpManager.centerPopUp(cc);
+			}
+			private function cerrarSesion():void{
+				this.usuarioTexto.visible=false;
+			   	this.toggleButtonBar.enabled=false;
+                this.currentState = "planificacion";
+                this.planificacionComp.enabled=false;
+                this.listaTareasComp.enabled=false;
+                this.sesion.userInput.text="";
+                this.sesion.userPass.text="";
+				this.init();
+			}
+        ]]>
+    </mx:Script>
+
+<mx:states>
+    <mx:State name="planificacion">    	
+         <mx:AddChild>
+         <mx:HBox id="planificacionHBox">
+         	<components:listaTareas id="listaTareasComp"/>
+         	<consultorias:planificacion id="planificacionComp"/>
+         </mx:HBox>
+         	
+         </mx:AddChild>   
+    </mx:State>
+    <mx:State name="administracion">    	
+         <mx:AddChild>
+         	<administracion:administracion id="administracion"/>
+         </mx:AddChild>   
+    </mx:State>
+    <mx:State name="capacitaciones">    	
+         <mx:AddChild>
+         	<capacitaciones:Capacitaciones id="capacitaciones" />
+         </mx:AddChild> 
+	</mx:State>
+</mx:states>
+
+	<!-- TRANSICIONES ENTRE LOS ESTADOS-->
+	
+    <mx:transitions>
+    	
+        <mx:Transition id="planificacionTransition"
+                fromState="*"
+                toState="planificacion">
+            <mx:WipeDown target="{planificacionHBox}"/>
+        </mx:Transition>
+        
+        <mx:Transition id="capacitacionesTransition"
+                fromState="*"
+                toState="capacitaciones">
+            <mx:WipeDown target="{capacitaciones}"/>
+        </mx:Transition>
+            
+        <mx:Transition id="administracionTransition"
+                fromState="*"
+                toState="administracion">
+            <mx:WipeDown target="{administracion}"/>
+        </mx:Transition>
+    </mx:transitions>
+    
+    <mx:Array id="dp">
+        <mx:Object data="planificacion" label="Consultorías" />
+        <!--
+        <mx:Object data="sg" label="Sistema de Gestión" />
+        -->
+        <mx:Object data="capacitaciones" label="Capacitaciones" />
+        <!--
+        <mx:Object data="proyectos" label="Proyectos" />
+        -->
+        <mx:Object data="administracion" label="Administración" />
+    </mx:Array>
+
+    <mx:ApplicationControlBar dock="true" height="99" horizontalAlign="center" horizontalGap="10" minWidth="150">
+        <mx:ToggleButtonBar id="toggleButtonBar"  enabled="false"
+                dataProvider="{dp}"
+                itemClick="{toggleButtonBar_itemClick(event)}"  horizontalAlign="center" verticalAlign="middle" fontSize="11" buttonWidth="180"/>
+        <mx:HBox verticalAlign="bottom">
+        	<mx:VBox width="281" height="96" verticalAlign="bottom" horizontalAlign="right" verticalGap="0">
+            	<mx:Image source="logotipo.jpg" height="80" width="217" verticalAlign="middle"/>
+	            <mx:HBox horizontalGap="0" verticalAlign="top" height="26">
+	                <mx:Text height="21" width="100" id="usuarioTexto" fontWeight="bold" textAlign="right" paddingTop="2.2"/>
+	                <mx:LinkButton label="cambiar clave" width="100" textDecoration="underline" click="{cambiaClaveClick()}"/>
+	            </mx:HBox>
+	       	</mx:VBox>
+          	<mx:LinkButton height="26" width="100" label="Cerrar Sesión" textDecoration="underline" 
+          		fontWeight="bold" textAlign="right" paddingBottom="6" click="{cerrarSesion()}"/>
+       	</mx:HBox>
+       
+    </mx:ApplicationControlBar>
+
+</mx:Application>

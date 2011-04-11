@@ -1,0 +1,701 @@
+<?xml version="1.0" encoding="utf-8"?>
+   
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" enabled="false" initialize="{creationCompleteHandler()}"
+	updateComplete="onShow()"  width="800" height="500" borderColor="#F49821" borderStyle="inset">
+<mx:Script>  
+       <![CDATA[
+       	import mx.rpc.events.ResultEvent;
+       	import mx.rpc.http.mxml.HTTPService;
+       	import clases.PlanificacionMail;
+       	import mx.events.DataGridEvent;
+       	import clases.Consultoria;
+       	import components.nuevaConsultoria;
+       	import mx.events.StateChangeEvent;
+       	import mx.events.CollectionEvent;
+       	import mx.collections.ArrayCollection;  
+		import clases.PlanificacionClass;
+		import mx.controls.Alert;
+		import mx.events.CalendarLayoutChangeEvent;
+		import mx.managers.PopUpManager;
+		import org.alivepdf.layout.Resize;
+		import org.alivepdf.layout.Mode;
+		import org.alivepdf.layout.Position;
+		import org.alivepdf.pdf.PDF;	
+		import org.alivepdf.display.Display;
+		import org.alivepdf.layout.Layout;
+		import org.alivepdf.layout.Orientation;
+		import org.alivepdf.layout.Size;
+		import org.alivepdf.layout.Unit;
+		import org.alivepdf.saving.Method;
+		import org.alivepdf.fonts.*;
+		import org.alivepdf.colors.RGBColor;
+		
+		import flash.display.BitmapData;
+		import mx.graphics.codec.JPEGEncoder;
+		import org.alivepdf.images.ColorSpace;
+		
+		private static const millisecondsPerMinute:int = 1000 * 60;
+		private static const millisecondsPerHour:int = 1000 * 60 * 60;
+		private static const millisecondsPerDay:int = 1000 * 60 * 60 * 24;
+		
+		[Bindable]
+		private var listaPlanifMails:ArrayCollection = new ArrayCollection;
+		[Bindable]
+		private var planificaciones:ArrayCollection;
+		private var nueva:nuevaConsultoria;
+		[Bindable]
+		private var listaMET:ArrayCollection = new ArrayCollection;
+		[Bindable]
+		private var listaMETPlanif:ArrayCollection = new ArrayCollection;
+		[Bindable]
+		private var listaConsult:ArrayCollection = new ArrayCollection;
+		private var rangeStart:Date;
+		private var rangeEnd:Date;
+		[Bindable]
+		private var listaNew:ArrayCollection = new ArrayCollection;
+		[Bindable]
+		private var listaUpdate:ArrayCollection = new ArrayCollection;
+		[Bindable]
+		private var listaDelete:ArrayCollection = new ArrayCollection;
+		private var actividad:String;
+		private var indexUpdate:int=0;
+		private var indexDelete:int=0;
+		private var emailService:HTTPService =  new HTTPService;
+		private var informeMesPop:informeMensual = new informeMensual;
+		
+		private function onShow():void{
+			
+			getData();
+			var minuteTimer:Timer = new Timer(1000, 2);
+			minuteTimer.addEventListener(TimerEvent.TIMER_COMPLETE, onTimerComplete);
+			minuteTimer.start();
+		}
+		private function creationCompleteHandler():void {  
+            // Inicializa datos  
+            this.id ="planificacionComponent";
+            this.planificaciones = new ArrayCollection();
+			nueva = new nuevaConsultoria;
+			
+            //se configuran las fechas
+            dateFieldInit(this.fecha);
+			var planif:PlanificacionClass = new PlanificacionClass;
+			
+			//muestra el rango de fechas actual
+			var date:Date = new Date;
+					
+			rangeStart = new Date(date.getTime() - (millisecondsPerDay * (date.day-1)));
+			rangeEnd = new Date(rangeStart.getTime() + (millisecondsPerDay * 6));
+			
+			var dia:String = rangeStart.getDate().toString();
+			var mes:String = (rangeStart.getMonth()+1).toString();
+			var anio:String =  rangeStart.getFullYear().toString();
+			// se corrige la fecha para qe sea exacta creando una con el dia mes y año obtenidos
+			rangeStart = new Date(mes+"/"+dia+"/"+anio);
+			
+			textoFecha.text = "Semana:  "+dia+"/"+mes+"/"+anio;
+			
+			dia = rangeEnd.getDate().toString();
+			mes = (rangeEnd.getMonth()+1).toString();
+			anio =  rangeEnd.getFullYear().toString();
+			// se corrige la fecha para qe sea exacta creando una con el dia mes y año obtenidos
+			rangeEnd = new Date(mes+"/"+dia+"/"+anio);
+			
+			textoFecha.text = textoFecha.text+" - "+dia+"/"+mes+"/"+anio;
+
+			emailService.url = "http://www.kimen.cl/amfphp/services/email.php";
+			emailService.method="POST"; 
+			emailService.resultFormat="xml";
+			emailService.addEventListener(ResultEvent.RESULT, emailResult);
+			
+			emailService.useProxy=false;
+			
+			this.TextLunes.text = "Lunes "+rangeStart.getDate();
+			var nuevaFecha:Date = new Date(this.rangeStart.getTime()+(millisecondsPerDay*1));
+			this.TextMartes.text = "Martes "+nuevaFecha.getDate();
+			nuevaFecha = new Date(this.rangeStart.getTime()+(millisecondsPerDay*2));
+			this.TextMiercoles.text = "Miercoles "+nuevaFecha.getDate();
+			nuevaFecha = new Date(this.rangeStart.getTime()+(millisecondsPerDay*3));
+			this.TextJueves.text = "Jueves "+nuevaFecha.getDate();
+			nuevaFecha = new Date(this.rangeStart.getTime()+(millisecondsPerDay*4));
+			this.TextViernes.text = "Viernes "+nuevaFecha.getDate();
+			getData();
+			var minuteTimer:Timer = new Timer(1000, 2);
+			minuteTimer.addEventListener(TimerEvent.TIMER_COMPLETE, onTimerComplete);
+			minuteTimer.start();
+           			
+
+         }  
+          public function emailResult(event:ResultEvent):void{
+        	
+        }
+        private function onTimerComplete(event:TimerEvent):void{
+            		setPlanificaciones(rangeStart, rangeEnd);
+		}
+		private function getData():void{
+         	var c:Conexion = new Conexion;
+            listaMET = c.getAllMets();
+            listaConsult = c.getAllConsultoria();
+        }
+        private function setPlanificaciones(rangeStart:Date, rangeEnd:Date):void{
+         	planificaciones = new ArrayCollection;
+         	var i:int, j:int;
+         	
+         	this.listaMETPlanif = new ArrayCollection;
+         	for(i=0;i<listaMET.length;i++){
+         		var met:Object = listaMET.getItemAt(i);
+         		
+         		if(met.programable==1){
+         			
+         		this.listaMETPlanif.addItem(met);
+         		
+         		var planif:PlanificacionClass = new PlanificacionClass;
+         		planif.persona = met.nombres;
+         		planif.rut = met.rut;
+         		for(j=0;j<listaConsult.length;j++){
+	         		var object:Object = listaConsult.getItemAt(j);
+	         		
+	         		var fecha:Date = new Date(object.fecha);
+	         		if(object.met==met.rut && fecha.getTime()>=rangeStart.getTime() && fecha.getTime()<=rangeEnd.getTime()){
+	         			switch(fecha.getDay()){
+	         				case 0:
+	         					//Alert.show("domingo!");
+	         					break;
+	         				case 1:
+	         					//Alert.show("lunes!");
+	         					if(object.jornada==0)
+	         						planif.lun1 = object.actividad;
+	         					else{
+	         						planif.lun2 = object.actividad;
+	         					}
+	         					break;	
+	         				case 2:
+	         					//Alert.show("martes!");
+	         					if(object.jornada==0)
+	         						planif.mar1 = object.actividad;
+	         					else{
+	         						planif.mar2 = object.actividad;
+	         					}
+	         					break;
+	         				case 3:
+	         					//Alert.show("miercoles!");
+	         					if(object.jornada==0)
+	         						planif.mier1 = object.actividad;
+	         					else{
+	         						planif.mier2 = object.actividad;
+	         					}
+	         					break;
+	         				case 4:
+	         					//Alert.show("jueves!");
+	         					if(object.jornada==0)
+	         						planif.juev1 = object.actividad;
+	         					else{
+	         						planif.juev2 = object.actividad;
+	         					}
+	         					break;
+	         				case 5:
+	         					//Alert.show("viernes!");
+	         					if(object.jornada==0)
+	         						planif.vier1 = object.actividad;
+	         					else{
+	         						planif.vier2 = object.actividad;
+	         					}
+	         					break;
+	         				case 6:
+	         					//Alert.show("sabado!");
+	         					break;			
+	         				}
+	         			}
+         			}
+         			this.planificaciones.addItem(planif);       		
+         		}
+         		}
+         	}
+         //retorna el nombre de un MET a partir de su rut
+         private function buscarMet(rut:String):String{
+         	var i:int;
+         	for(i=0;i<listaMET.length;i++){
+         		var object:Object = listaMET.getItemAt(i);
+         		if(object.rut == rut)
+         			return object.nombres;
+         	}
+         	return "";
+         }
+         private function dateFieldInit(date:DateField):void {
+                date.dayNames=['Dom', 'Lun', 'Mar', 
+                    'Mie', 'Jue', 'Vie', 'Sab'];
+                date.monthNames=['Enero','Febrero','Marzo','Abril',
+                	'Mayo','Junio','Julio','Agosto','Septiembre',
+                	'Octubre','Noviembre','Diciembre'];
+                	
+                date.firstDayOfWeek = 1;
+                date.selectedDate = (new Date());
+                date.formatString="DD/MM/YYYY" ;
+               
+            }
+   
+      	public function setPlanificacion(p:ArrayCollection):void{
+      		this.planificaciones = p;
+      	}
+      	public function getSemana():Date{
+      		//obtener el mes correspondiente a la fecha y devolverlo
+      		return new Date();
+      		
+      	}
+      	private function changeDate(event:CalendarLayoutChangeEvent):void{
+			//al cambiar la fecha, actualizar la tabla
+			
+			var dia:String = fecha.selectedDate.getDate().toString();
+			var mes:String = (fecha.selectedDate.getMonth()+1).toString();
+			var anio:String	= fecha.selectedDate.getFullYear().toString();
+			//Alert.show("dia: "+dia+" mes: "+mes+" año: "+anio);
+			
+			rangeStart = new Date(event.newDate.getTime() - (millisecondsPerDay * (event.newDate.day-1)));
+			rangeEnd = new Date(rangeStart.getTime() + (millisecondsPerDay * 6));
+			
+			dia = rangeStart.getDate().toString();
+			mes = (rangeStart.getMonth()+1).toString();
+			anio =  rangeStart.getFullYear().toString();
+			textoFecha.text = "Semana:  "+dia+"/"+mes+"/"+anio;
+			
+			dia = rangeEnd.getDate().toString();
+			mes = (rangeEnd.getMonth()+1).toString();
+			anio =  rangeEnd.getFullYear().toString();
+			textoFecha.text = textoFecha.text+" - "+dia+"/"+mes+"/"+anio;
+			this.TextLunes.text = "Lunes "+rangeStart.getDate();
+			var nuevaFecha:Date = new Date(this.rangeStart.getTime()+(millisecondsPerDay*1));
+			this.TextMartes.text = "Martes "+nuevaFecha.getDate();
+			nuevaFecha = new Date(this.rangeStart.getTime()+(millisecondsPerDay*2));
+			this.TextMiercoles.text = "Miercoles "+nuevaFecha.getDate();
+			nuevaFecha = new Date(this.rangeStart.getTime()+(millisecondsPerDay*3));
+			this.TextJueves.text = "Jueves "+nuevaFecha.getDate();
+			nuevaFecha = new Date(this.rangeStart.getTime()+(millisecondsPerDay*4));
+			this.TextViernes.text = "Viernes "+nuevaFecha.getDate();
+			getData();
+			var minuteTimer:Timer = new Timer(1000, 2);
+			minuteTimer.addEventListener(TimerEvent.TIMER_COMPLETE, onTimerComplete);
+			minuteTimer.start();
+			
+		}
+		private function nuevaClick():void{
+			//despliega el panel de la nueva consultoria
+			
+            PopUpManager.addPopUp(nueva, MetActivo.parent, true);
+            PopUpManager.centerPopUp(nueva);
+            nueva.guardarButton.addEventListener(MouseEvent.CLICK, closePopUpGuardar);
+            nueva.cancelarButton.addEventListener(MouseEvent.CLICK, closePopUpCancelar);
+            nueva.addMets(listaMET);
+            	
+		}
+		private function closePopUpGuardar(evt:MouseEvent):void {
+	    	var c:Consultoria = new Consultoria();
+	    	var s:Array;
+	    	s = nueva.fecha.text.toString().split("/");
+	    	var fecha:String = s[2]+"-"+s[1]+"-"+s[0];
+	    	
+	    	c.fecha=fecha;
+	    	c.jornada = nueva.jornadaCombo.selectedIndex;
+	    	c.met = nueva.getSelectedMet();
+	    	c.actividad = nueva.actividad.text;
+	    	var conex:Conexion = new Conexion;
+            conex.insertConsultoria(c);
+            
+	    }
+	    private function closePopUpCancelar(evt:MouseEvent):void {
+	    	PopUpManager.removePopUp(nueva);
+	    	getData();
+			var minuteTimer:Timer = new Timer(1000, 2);
+			minuteTimer.addEventListener(TimerEvent.TIMER_COMPLETE, onTimerComplete);
+			minuteTimer.start();	
+	    }
+	    private function changeDataGrid(event:DataGridEvent):void{
+	    	var fecha:Date;
+	    	var planif:PlanificacionClass;
+	    	var multiplicador:int = 0;
+	    	var consult:Consultoria = new Consultoria;
+	    	planif = planificaciones.getItemAt(event.rowIndex) as PlanificacionClass;
+			//Alert.show("met: "+planif.persona+", rut: "+planif.rut+", column: "+event.columnIndex);
+			switch(event.columnIndex){
+	  			case 1://lun mañana
+	    			multiplicador=0;
+	    			consult.jornada=0;
+	    			consult.actividad=event.currentTarget.itemEditorInstance.text;
+	   				break;
+	   			case 2://lun tarde
+	   				multiplicador=0;
+	   				consult.jornada=1;
+	   				consult.actividad=event.currentTarget.itemEditorInstance.text;
+	    			break;
+	    		case 3://mart mañana
+	   				multiplicador=1;
+	   				consult.jornada=0;
+	   				consult.actividad=event.currentTarget.itemEditorInstance.text;
+	    			break;
+	    		case 4://mart tarde
+	   				multiplicador=1;
+	   				consult.jornada=1;
+	   				consult.actividad=event.currentTarget.itemEditorInstance.text;
+	    			break;
+	    		case 5://mier mañana
+	   				multiplicador=2;
+	   				consult.jornada=0;
+	   				consult.actividad=event.currentTarget.itemEditorInstance.text;
+	    			break;
+	    		case 6://mier tarde
+	   				multiplicador=2;
+	   				consult.jornada=1;
+	   				consult.actividad=event.currentTarget.itemEditorInstance.text;
+	    			break;
+	    		case 7://juev mañana
+	   				multiplicador=3;
+	   				consult.jornada=0;
+	   				consult.actividad=event.currentTarget.itemEditorInstance.text;
+	    			break;
+	    		case 8://juev tarde
+	   				multiplicador=3;
+	   				consult.jornada=1;
+	   				consult.actividad=event.currentTarget.itemEditorInstance.text;
+	    			break;
+	    		case 9://vier mañana
+	   				multiplicador=4;
+	   				consult.jornada=0;
+	   				consult.actividad=event.currentTarget.itemEditorInstance.text;
+	    			break;
+	    		case 10://vier tarde
+	   				multiplicador=4;
+	   				consult.jornada=1;
+	   				consult.actividad=event.currentTarget.itemEditorInstance.text;
+	    			break;
+	    				
+	    	}
+	    	fecha = new Date(this.rangeStart.getTime()+(millisecondsPerDay*multiplicador));
+	    	var newFecha:String = fecha.getFullYear()+"-"+(fecha.getMonth()+1)+"-"+fecha.getDate();
+	    	consult.fecha=newFecha;
+	    	consult.met=planif.rut;
+	    	if(event.reason!="newRow")
+	    		this.listaNew.addItem(consult);	
+	    	
+	    	var plan:PlanificacionMail = new PlanificacionMail(this.textoFecha.text);
+	    	plan.email = this.listaMETPlanif.getItemAt(event.rowIndex).email;
+	    	plan.num_semana = calculateISO8601WeekNumber(fecha);
+	    	this.addListaMails(plan);
+
+	    }
+	    private function newConsultoria(jornada:int, met:String, actividad:String,day:int):Consultoria{
+	    	var fecha:Date = this.rangeStart;
+	    	
+	    	switch(day){
+	    		case 0:
+	    			break;
+	    		case 1:
+	    			fecha = new Date(fecha.getTime() + (millisecondsPerDay*1));
+	    			break;
+	    		case 2:
+	    			fecha = new Date(fecha.getTime() + (millisecondsPerDay*2));
+	    			break;
+	    		case 3:
+	    			fecha = new Date(fecha.getTime() + (millisecondsPerDay*3));
+	    			break;
+	    		case 4:
+	    			fecha = new Date(fecha.getTime() + (millisecondsPerDay*4));
+	    			break;
+	    	}
+	    	var dia:String = fecha.getDate().toString();
+			var mes:String = (fecha.getMonth()+1).toString();
+			var anio:String =  fecha.getFullYear().toString();
+			var textoFecha:String = anio+"-"+mes+"-"+dia;
+	    	var c:Consultoria = new Consultoria();
+	    	c.fecha=textoFecha;
+	    	c.jornada = jornada;
+	    	c.met = met;
+	    	c.actividad = actividad;
+	    	return c;
+	    }
+	    private function preventEditing(event:DataGridEvent):void{
+	    	var planif:PlanificacionClass = planificaciones.getItemAt(event.rowIndex) as PlanificacionClass;
+	    	var consult:Consultoria = new Consultoria;
+	    	switch(event.columnIndex){
+	    		case 1://lun mañana
+	    			this.actividad = planif.lun1;
+	    				consult = this.newConsultoria(0,planif.rut,"",0);			
+	    			break;
+	    		case 2://lun tarde
+	    			this.actividad = planif.lun2;
+		  				consult = this.newConsultoria(1,planif.rut,"",0);
+	    			break;
+	    		case 3://mart mañana
+	    			this.actividad = planif.mar1;
+	    				consult = this.newConsultoria(0,planif.rut,"",1);	
+	    			break;
+	    		case 4://mart tarde
+	    			this.actividad = planif.mar2;
+	    				consult = this.newConsultoria(1,planif.rut,"",1);	
+	    			break;
+	    		case 5://mier mañana
+	    			this.actividad = planif.mier1;
+	    				consult = this.newConsultoria(0,planif.rut,"",2);
+	    			break;
+	    		case 6://mier tarde
+	    			this.actividad = planif.mier2;
+	    				consult = this.newConsultoria(1,planif.rut,"",2);	
+	    			break;
+	    		case 7://juev mañana
+	    			this.actividad = planif.juev1;
+	    				consult = this.newConsultoria(0,planif.rut,"",3);	
+	    			break;
+	    		case 8://juev tarde
+	    			this.actividad = planif.juev2;
+	    				consult = this.newConsultoria(1,planif.rut,"",3);	
+	    			break;
+	    		case 9://vier mañana
+	    			this.actividad = planif.vier1;
+	    				consult = this.newConsultoria(0,planif.rut,"",4);
+	    			break;
+	    		case 10://vier tarde
+	    			this.actividad = planif.vier2;
+	    				consult = this.newConsultoria(1,planif.rut,"",4);	
+	    			break;
+	    	}
+			//this.listaNew.addItem(consult);
+			this.listaDelete.addItem(consult);
+		}
+	    private function guardarClick():void{
+	    	var i:int;
+			var c:Conexion = new Conexion;
+			for(i=0;i<this.listaDelete.length;i++){
+	    		c.deleteConsult(listaDelete.getItemAt(i) as Consultoria);
+	    	}
+	    	listaDelete.removeAll();
+	    	for(i=0;i<this.listaNew.length;i++){
+	    		c.insertConsultoria(listaNew.getItemAt(i) as Consultoria);
+	    	}
+	    	listaNew.removeAll();
+	    	/*
+	    	for(i=0;i<this.listaUpdate.length;i++){
+	    		c.updateConsult(listaUpdate.getItemAt(i) as Consultoria);
+	    	}
+	    	listaUpdate.removeAll();
+	    	*/
+	    	Alert.show("Cambios guardados exitosamente!.");
+	    	envia_mail();
+	    }
+	    private function envia_mail():void{
+	    	var i:int;
+	    	var c:Conexion = new Conexion;
+	    	for(i=0;i<this.listaPlanifMails.length;i++){
+	    		var p:PlanificacionMail = listaPlanifMails.getItemAt(i) as PlanificacionMail;
+	    		var senderName:String = MetActivo.nombres;//"KIMEN Administración";
+	            var senderEmail:String = MetActivo.email;//"admin@kimen.cl";
+	            var sendToName:String = "MET";
+        	
+	            c.gateway.call("email.send_planif", new Responder(emailResult,emailResult),
+	            senderName, senderEmail, sendToName, p.email, p.mensaje);
+	        	
+      		}
+      		this.listaPlanifMails = new ArrayCollection;
+	    }
+	    private function addListaMails(plan:PlanificacionMail):void{
+	    	var i:int;
+	    	for(i=0;i<this.listaPlanifMails.length;i++){
+	    		var p:PlanificacionMail = listaPlanifMails.getItemAt(i) as PlanificacionMail;
+	    		if(p.email == plan.email && p.num_semana == plan.num_semana)
+	    			return;
+	    	}
+	    	this.listaPlanifMails.addItem(plan);
+	    }
+	    /**
+		 *	ISO-8601 Week Number
+		 *	Processes the week number of a date,
+		 *	just like date("W") would do in PHP.
+		 *
+		 *	Procedure by Rick McCarty, 1999
+		 *	Adapted to CVI by R.Bozzolo, 2006
+		 *	Adapted to AS2 by A.Colonna, 2008
+		 *
+		 */
+		function calculateISO8601WeekNumber(d:Date):int {
+			// 1) Convert date to Y M D
+			var Y:Number = d.getFullYear();
+			var M:Number = d.getMonth();
+			var D:Number = d.getDate();
+			
+			// 2) Find out if Y is a leap year
+			var isLeapYear:Boolean = (Y % 4 == 0  &&  Y % 100 != 0) && Y % 400 == 0;
+			
+			// 3) Find out if Y-1 is a leap year
+			var lastYear:Number = Y - 1;
+			var lastYearIsLeap:Boolean = (lastYear % 4 == 0  &&  lastYear % 100 != 0) && lastYear % 400 == 0;
+			
+			// 4) Find the Day of Year Number for Y M D
+			var month = [0,31,59,90,120,151,181,212,243,273,304,334];
+			var DayOfYearNumber:Number = D + month[M];
+			if(isLeapYear && M > 1)
+				DayOfYearNumber++;
+			
+			// 5) Find the weekday for Jan 1 (monday = 1, sunday = 7)
+			var YY:Number = (Y-1) % 100; // ...
+			var C:Number = (Y-1) - YY; // get century
+			var G:Number = YY + YY/4; // ...
+		   	var Jan1Weekday:Number = 1 + (((((C / 100) % 4) * 5) + G) % 7);
+			
+			// 6) Find the weekday for Y M D
+			var H:Number = DayOfYearNumber + (Jan1Weekday - 1);
+		   	var Weekday:Number = 1 + ((H -1) % 7);
+			
+			var YearNumber = Y;
+			var WeekNumber;
+			// 7) Find if Y M D falls in YearNumber Y-1, WeekNumber 52 or 53
+			if (DayOfYearNumber <= (8-Jan1Weekday) && Jan1Weekday > 4)
+			{
+				trace('Date is within the last week of the previous year.');
+				YearNumber = Y - 1;
+				if (Jan1Weekday == 5 && (Jan1Weekday == 6 && isLeapYear))
+				{
+					WeekNumber = 53;
+				} else
+				{ 
+					WeekNumber = 52;
+				}
+			}
+			
+			// 8) Find if Y M D falls in YearNumber Y+1, WeekNumber 1
+			if (YearNumber == Y)
+			{
+				var I:Number = 365;
+				if (isLeapYear)
+				{ 
+					var I:Number = 366;
+				}
+				if (I - DayOfYearNumber < 4 - Weekday)
+				{
+					trace('Date is within the first week of the next year.');
+					YearNumber = Y + 1;
+					WeekNumber = 1;
+				}
+			}
+			
+			// 9) Find if Y M D falls in YearNumber Y, WeekNumber 1 through 53
+			if (YearNumber == Y)
+			{
+				trace('Date is within it\'s current year.');
+				var J:Number = DayOfYearNumber + (7 - Weekday) + (Jan1Weekday -1);
+				WeekNumber = J / 7;
+				if (Jan1Weekday > 4)
+				{
+					WeekNumber--;
+				}
+			}
+			
+			return WeekNumber;
+		}
+		private function imprimirTabla():void{
+			var p:PDF = new PDF( Orientation.PORTRAIT, Unit.MM, Size.LETTER);
+			p.addPage();
+			p.setX(80);
+			p.textStyle( new RGBColor(0x000000) );
+			p.writeText(25,"Planificación de Consultorías");
+			
+		
+			var bitmapData:BitmapData = new BitmapData(3*canvasPlanificacion.width,3*canvasPlanificacion.height);
+				// Again 3 is for scaling we are passing for transformation matrix
+			bitmapData.draw(canvasPlanificacion,new Matrix(3,0,0,3),null,null,null,true);
+			var jpgEncoder:JPEGEncoder = new JPEGEncoder();
+			var ba:ByteArray = jpgEncoder.encode(bitmapData);
+			p.addImageStream(ba,ColorSpace.DEVICE_RGB, 
+			new Resize ( Mode.FIT_TO_PAGE, Position.CENTERED ), 0, 0, 0, 0, 0, 1, "Normal", null);
+			
+			var archivo:FileReference = new FileReference;
+			archivo.save(p.save(Method.LOCAL), "Planificación.pdf");
+		}
+	    private function showInformeMensual():void{
+            //se conecta con AMFPHP                
+			var c:Conexion = new Conexion;
+			
+			listaMET = c.getAllMets();
+        	//despliega el inicio de sesion
+        	PopUpManager.addPopUp(informeMesPop, MetActivo.parent, true);
+            PopUpManager.centerPopUp(informeMesPop);
+            informeMesPop.imprimirButton.addEventListener(MouseEvent.CLICK, closePopUpImprimir);
+        	informeMesPop.cancelarButton.addEventListener(MouseEvent.CLICK, closePopUpCancelarInformeMes);	
+        	informeMesPop.month = this.rangeStart.getMonth();
+        	informeMesPop.year = this.rangeStart.getFullYear();		
+        	informeMesPop.init();
+	    }
+	    private function closePopUpCancelarInformeMes(evt:MouseEvent):void {
+	    	PopUpManager.removePopUp(informeMesPop);
+	    }
+	    private function closePopUpImprimir(evt:MouseEvent):void {
+	    }
+       ]]>  
+     </mx:Script>  
+	<mx:Canvas id="canvasPlanificacion" width="776" height="452" x="10" y="34">
+		<mx:HBox x="10" y="36" width="756" fontSize="12" horizontalAlign="left" borderStyle="solid" height="22">
+			<mx:Text text="MET" width="60" textAlign="center"/>
+			<mx:VRule width="2" height="22"/>
+			<mx:Text id="TextLunes" text="Lunes" width="119" textAlign="center"/>
+			<mx:VRule width="2" height="22"/>
+			<mx:Text id="TextMartes" text="Martes"  width="119" textAlign="center"/>
+			<mx:VRule width="2" height="22"/>
+			<mx:Text id="TextMiercoles" text="Miércoles"  width="119" textAlign="center"/>
+			<mx:VRule width="2" height="22"/>
+			<mx:Text id="TextJueves" text="Jueves" width="120" textAlign="center"/>
+			<mx:VRule width="2" height="22"/>
+			<mx:Text id="TextViernes" text="Viernes" width="120" textAlign="center"/>
+		</mx:HBox>
+		
+		<mx:HBox x="10" y="57" width="756" borderStyle="solid" id="jornadaHBox" height="18">
+			<mx:Text text=" " width="60" textAlign="center"/>
+			<mx:VRule width="2" height="18"/>
+			<mx:Text text="Mañana" width="56" textAlign="center"/>
+			<mx:Text text="Tarde" width="55" textAlign="center"/>
+			<mx:VRule width="2" height="18"/>
+			<mx:Text text="Mañana" width="61" textAlign="center"/>			
+			<mx:Text text="Tarde" width="50" textAlign="center"/>
+			<mx:VRule width="2" height="18"/>
+			<mx:Text text="Mañana" width="56" textAlign="center"/>
+			<mx:Text text="Tarde" width="55" textAlign="center"/>
+			<mx:VRule width="2" height="18"/>
+			<mx:Text text="Mañana" width="54" textAlign="center"/>
+			<mx:Text text="Tarde" width="58" textAlign="center"/>
+			<mx:VRule width="2" height="18"/>
+			<mx:Text text="Mañana" width="51" textAlign="center"/>
+			<mx:Text text="Tarde" width="62" textAlign="center"/>
+		</mx:HBox>
+		<mx:DataGrid x="10" y="74" width="756" height="338" id="tabla" dataProvider="{planificaciones}" 
+			showHeaders="false" resizableColumns="false" editable="true" itemEditEnd="{changeDataGrid(event)}"
+			 itemEditBegin="{preventEditing(event)}">
+			<mx:columns>
+				<mx:DataGridColumn dataField="persona" editable="false"/>
+				<mx:DataGridColumn dataField="lun1" editable="true" />
+				<mx:DataGridColumn dataField="lun2" editable="true"/>
+				<mx:DataGridColumn dataField="mar1" editable="true"/>
+				<mx:DataGridColumn dataField="mar2" editable="true"/>
+				<mx:DataGridColumn dataField="mier1" editable="true"/>
+				<mx:DataGridColumn dataField="mier2" editable="true"/>
+				<mx:DataGridColumn dataField="juev1" editable="true"/>
+				<mx:DataGridColumn dataField="juev2" editable="true"/>
+				<mx:DataGridColumn dataField="vier1" editable="true"/>
+				<mx:DataGridColumn dataField="vier2" editable="true"/>
+			</mx:columns>
+		</mx:DataGrid>
+		<mx:VRule x="79" y="74" strokeColor="#F49821" width="3" height="338"/>
+		<mx:VRule x="628" y="74" strokeColor="#F49821" width="3" height="338"/>
+		<mx:HBox x="10" y="10" width="329">
+			<mx:Text text="Semana:" id="textoFecha" fontWeight="bold"/>
+			<mx:DateField width="17" id="fecha" change="{changeDate(event)}" height="20" yearNavigationEnabled="true"/>
+		</mx:HBox>
+		<mx:VRule x="352" y="74" strokeColor="#F49821" width="3" height="338"/>
+		<mx:VRule x="489" y="74" strokeColor="#F49821" width="3" height="338"/>
+		<mx:VRule x="215" y="74" strokeColor="#F49821" width="3" height="338"/>
+		<mx:Button x="384" y="420" label="Informe mensual" click="{showInformeMensual()}"/>
+		
+		
+		
+	</mx:Canvas>
+	<mx:Button x="654" y="454" label="Guardar cambios" id="guardar" click="{guardarClick()}"/>
+		<mx:Button x="524" y="454" label="Imprimir Tabla" id="imprimir" click="{imprimirTabla()}"/>
+		
+		
+	<mx:Text x="0" y="8"  text="Planificación de Consultorías" width="100%" textAlign="center" fontSize="15" fontWeight="bold"/>
+	
+   
+</mx:Canvas>

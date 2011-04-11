@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="755" height="412"
+	 xmlns:ns1="components.*" creationComplete="init()" xmlns:ns2="com.hillelcoren.components.*">
+<mx:Script>
+	<![CDATA[
+		import mx.rpc.events.ResultEvent;
+		import mx.rpc.http.mxml.HTTPService;
+		import clases.capacitaciones.*;
+		import mx.collections.ArrayCollection;
+		import clases.MET;
+		import mx.controls.Alert;
+		
+		[Bindable]
+		private var listaCliente:ArrayCollection;
+		[Bindable]
+		private var lista:ArrayCollection;
+		private var c:Conexion;
+		[Bindable]
+		private var currentCodigo:String;
+		
+		private var emailService:HTTPService =  new HTTPService;
+		private function init():void{
+			c = new Conexion;
+			var flag:int = 1;
+			listaCliente = c.getAllCliente(flag);
+			MetActivo.componenteActivo =  NuevoAlumno;
+			MetActivo.rutSeleccionado = MetActivo.rut;
+			
+			emailService.useProxy=false;
+			//actualizamos el rut del relator en el formulario
+           	//this.clienteChanged();
+		}
+		
+		
+		
+		private function cancelarClick():void{
+			(this.parent as VerTodosAlumnos).showVerTodos();
+		}
+		private function validaRUT(rut:String, validador:int):Boolean{
+			var lista:ArrayCollection = new ArrayCollection;
+			lista.addItem("3");
+			lista.addItem("2");
+			lista.addItem("7");
+			lista.addItem("6");
+			lista.addItem("5");
+			lista.addItem("4");
+			lista.addItem("3");
+			lista.addItem("2");
+			// ("4","3","2","7","6","5","4","3","2");
+			var i:int, suma:int=0, flag:int =0, j:int=7;
+			
+			for (i=rut.length-1; flag==0; i--){
+				if(i>=0)
+					suma+=parseInt(rut.charAt(i))*parseInt(lista.getItemAt(j) as String);
+				else{
+					flag=-1;
+				}
+				j--;				
+			}
+			var resto:int= suma%11;
+			var calc:int = 11 - resto;
+			if(validador==calc)
+				return true;
+			return false;
+		}
+		private function registrarClick():void{
+			var validador:int=-1;
+			if(this.rutInput0.text=="" || this.rutInput.text==""){
+				Alert.show("Error, debe ingresar el rut correctamente!");
+				return;
+			}
+			if(this.rutInput0.text.toUpperCase()=="K")
+				validador =10;
+			else if(this.rutInput0.text=="0")
+				validador =11;
+			else{
+				validador = parseInt(this.rutInput0.text);
+			}
+			if(validaRUT(this.rutInput.text, validador)){
+				if(checkFields()){
+					if(rutInput.text.charAt(0) =="0")
+						this.rutInput.text=this.rutInput.text.substr(1,8);
+					var alumno:Alumno = new Alumno;
+					alumno.apellidos = this.apellidosTxtInput.text;
+					alumno.nivel_educacional = this.nivelEducacionalCombo.selectedItem.toString().substr(0,2);
+					alumno.nombres = this.nombresTxtInput.text;
+					alumno.porc_sence = this.senceTxtInput.text;
+					alumno.rut = this.rutInput.text + this.rutInput0.text;
+					alumno.rut_empresa = this.autoComplete.selectedItem.rut;
+					
+					c.insertAlumno(alumno);
+				}else{
+					Alert.show("Error, debe completar todos los campos.");
+				}
+			
+			}else{
+				Alert.show("Error, ingrese Rut correctamente.");
+			}
+	
+		}
+		private function checkFields():Boolean{
+			if(this.nombresTxtInput.text!="" && this.apellidosTxtInput.text!="" && 
+			this.senceTxtInput.text!="" && 
+			this.autoComplete.selectedItem!=null && this.nombreEmpresaTxt.text!="")
+				return true;
+			return false;
+		}
+		
+		private function getFormattedDate(date:Date):String{
+			var finalDate:String;
+			finalDate = date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
+			//Alert.show("fecha: "+finalDate);
+			return finalDate;
+		}
+		
+		private function nuevoRegistroClick():void{
+			(this.parent as VerTodosAlumnos).nuevoClick();	
+		}
+		
+	]]>
+</mx:Script>
+	<mx:Button x="462" y="380" label="Cancelar" click="{cancelarClick()}"/>
+	<mx:Text x="10" y="10" text="Registro de un nuevo Alumno" fontSize="11"/>
+	<mx:Button x="666" y="380" label="Registrar" id="registrarButton" click="{registrarClick()}"/>
+	<mx:Button x="545" y="380" label="Nuevo Registro" id="registrarButton0" click="{nuevoRegistroClick()}"/>
+	<mx:Canvas x="10" y="37" width="735" height="335" borderStyle="inset">
+		<mx:Text x="285.5" y="194" text="Nombre:"/>
+		<mx:Text x="139.5" y="10" text="Datos Generales" fontWeight="bold"/>
+		<mx:Text x="139.5" y="168" text="Empresa" fontWeight="bold"/>
+		<mx:Text x="285.5" y="42" text="Nombres:"/>
+		<mx:Text x="117.5" y="98" text="Nivel educaional:"/>
+		<mx:Text x="453.5" y="98" text="Porcentaje SENCE:"/>
+		<mx:TextInput x="453.5" y="124" id="senceTxtInput" width="160" restrict="0-9"/>
+		<mx:TextInput x="285.5" y="220" id="nombreEmpresaTxt" width="160" editable="false"/>
+		<mx:Text x="117.5" y="194" text="Rut: "/>
+		<mx:TextInput x="285.5" y="68" id="nombresTxtInput" width="160"/>
+		<mx:Text x="453.5" y="42" text="Apellidos:"/>
+		<mx:TextInput x="453.5" y="68" id="apellidosTxtInput" width="160"/>
+		<mx:Text x="117.5" y="42" text="Rut"/>
+		<mx:Text x="239.5" y="70" text="-"/>
+		<mx:TextInput x="117.5" y="68" id="rutInput" width="114" maxChars="8" toolTip="ejemplo de rut: 11222333-4" restrict="0-9"/>
+		<mx:TextInput x="255.5" y="68" id="rutInput0" width="22" maxChars="1"/>
+		<ns2:AdvancedAutoComplete id="autoComplete" x="117.5" y="220" width="160" dataProvider="{listaCliente}"  labelField="rut"
+			prompt="Ingrese rut" allowMultipleSelection="false" change="{this.nombreEmpresaTxt.text=autoComplete.selectedItem.nombre}"/>
+		<mx:ComboBox id="nivelEducacionalCombo" x="117" y="124" width="328.5">
+			<mx:dataProvider>
+				<mx:Array>
+					<mx:String>01: Sin escolaridad</mx:String>
+					<mx:String>02: Básica Incompleta</mx:String>
+					<mx:String>03: Básica Completa</mx:String>
+					<mx:String>04: Media Incompleta</mx:String>
+					<mx:String>05: Media Completa</mx:String>
+					<mx:String>06: Superior técnica profesional incompleta</mx:String>
+					<mx:String>07: Superior técnica profesional completa</mx:String>
+					<mx:String>08: Universidad Incompleta</mx:String>
+					<mx:String>09: Universidad Completa</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		
+	</mx:Canvas>
+	
+	
+</mx:Canvas>

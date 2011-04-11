@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" title="Agregar alumno al curso" layout="absolute" width="592" 
+	height="346" defaultButton="{agregarButton}"  borderColor="#F49821" borderAlpha="0.7" creationComplete="onShow()"  xmlns:ns2="com.hillelcoren.components.*">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.managers.PopUpManager;
+			[Bindable]
+			public var listaAlumnos:ArrayCollection;
+			private var c:Conexion;
+			
+			public function onShow():void{
+				c = new Conexion;
+				listaAlumnos = new ArrayCollection;
+				
+			}
+			public function deleteAlumnos(lista:ArrayCollection):void{
+				var i:int = 0;
+				var j:int = 0;
+				for (i=0;i<lista.length;i++){
+					for(j=0;j<listaAlumnos.length;j++){
+						if(lista.getItemAt(i).rut == listaAlumnos.getItemAt(j).rut)
+							listaAlumnos.removeItemAt(j);
+					}
+				}
+			}
+			public function setListaAlumnos(lista:ArrayCollection):void{
+				this.listaAlumnos = lista;
+			}
+  			private function enableButtons():void{
+  				this.agregarButton.enabled = true;
+  				
+  			}
+		]]>
+	</mx:Script>
+	<mx:Button x="489" y="274" label="Agregar" id="agregarButton" enabled="false"/>
+	<mx:Button x="406" y="274" label="Volver" id="cancelarButton" />
+	<mx:Text x="10" y="10" text="Seleccione alumno:"/>
+	<mx:DataGrid x="10" y="36" width="552" height="230" id="listaGrid" dataProvider="{listaAlumnos}"
+	itemClick="{enableButtons()}" allowMultipleSelection="true" doubleClickEnabled="true">
+		<mx:columns>
+			<mx:DataGridColumn headerText="Nombres" dataField="nombres" width="80"/>
+			<mx:DataGridColumn headerText="Apellidos" dataField="apellidos" width="100"/>
+			<mx:DataGridColumn headerText="Rut" dataField="rut" width="60"/>
+			<mx:DataGridColumn headerText="N. E." dataField="nivel_educacional" width="30"/>
+			<mx:DataGridColumn headerText="Rut de empresa" dataField="rut_empresa" width="70"/>
+			<mx:DataGridColumn headerText="%SENCE" dataField="porc_sence" width="50"/>
+			
+		</mx:columns>
+	</mx:DataGrid>
+	<ns2:AdvancedAutoComplete x="432" y="10" width="130" id="autoComplete" dataProvider="{listaAlumnos}" labelField="rut"
+		prompt="Ingrese rut de Alumno" allowMultipleSelection="false" />
+	
+</mx:Panel>

@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="756" height="804" xmlns:ns1="components.*" 
+	initialize="init()">
+<mx:Script>
+	<![CDATA[
+		import mx.rpc.events.ResultEvent;
+		import remoting.events.RemoteResultEvent;
+		import remoting.events.RemoteExceptionEvent;
+		import remoting.services.RemoteFileService;
+		import remoting.services.RemoteService;
+		import clases.MET;
+		import mx.controls.Alert;
+		import remoting.vo.FileVO;
+		private var c:Conexion = new Conexion;
+		private var met:MET;
+		private var rutAntiguo:String;
+		private var resultado:ResultEvent;
+		private var refUploadFile:FileReference = new  FileReference(); 
+		
+		private function init():void{
+			this.dateFieldInit(this.fechaIngresoInput);
+			this.dateFieldInit(this.fechaNacimientoInput);
+			if(MetActivo.permiso=="Usuario"){
+					this.permisosInput.enabled = false;
+					this.programable.enabled = false;
+				}
+			
+		}
+		private function cancelarClick():void{
+			(this.parent as verTodos ).showVerTodos();
+		}
+		private function guardarClick():void{
+			var rut:String = this.rutInput.text + this.rutInput0.text.toUpperCase();
+			this.met.alergias = this.alergiasInput.text;
+			this.met.apellidos = this.apellidoInput.text;
+			this.met.banco = this.bancoComboInput.selectedItem.toString();
+			this.met.contacto_emerg = this.contactoEmergInput.text;
+			this.met.cuenta_cte = parseInt(this.cuentaInput.text) ;
+			this.met.direccion = this.direccionInput.text;
+			this.met.direccion_emerg = this.direccionEmergInput.text;
+			this.met.fono_cel = this.fonoCelularInput.text;
+			this.met.fono_emerg = this.fonoEmergInput.text;
+			this.met.fono_particular = this.fonoParticularInput.text;
+			this.met.grupo_sangre = this.grupoEmergInput.text
+			this.met.nombres = this.nombreInput.text;
+			this.met.permiso = this.permisosInput.selectedItem.toString();
+			this.met.profesion = this.profesionInput.text;
+			if(this.programable.selected)
+				this.met.programable = 1;
+			else
+				this.met.programable = 0;
+			this.met.relacion_emerg = this.relacionEmergInput.text;
+			this.met.rut = rut
+			if(this.rutAntiguo!=rut)
+				this.met.contrasena = rut;
+			this.met.afp = this.afpInput.selectedItem.toString();
+			this.met.conflicto_intereses = this.conflictoInput.text;
+			this.met.contraindicaciones = this.contraindicacionesInput.text;
+			this.met.email = this.emailInput.text;
+			this.met.estado_civil = this.estadoCivilInput.selectedItem.toString();
+			this.met.factor_rh = this.factorRHCombo.selectedItem.toString();
+			this.met.fecha_ingreso = this.getFormattedDate(fechaIngresoInput.selectedDate);
+			this.met.fecha_nacimiento = this.getFormattedDate(fechaNacimientoInput.selectedDate);
+			this.met.isapre = this.isapreComboInput.selectedItem.toString();
+			this.met.observaciones = this.obsInput.text;
+			this.met.post_grado = this.postGradoInput.text;
+			this.met.problemas_legales = this.problemasLegalesInput.text;
+			this.met.problemas_salud = this.problemasSaludInput.text;
+			this.met.profesion_casa = this.profesion_casaInput.text;
+			this.met.post_grado_casa = this.postGrado_casaInput.text;
+			this.met.tipo = this.tipoMetInput.selectedItem.toString();
+			if(this.subirComponente.isUploaded)
+					this.met.archivo = "AttachFile.gif";
+			var c:Conexion = new Conexion;
+			if(c.updateMET(this.rutAntiguo, this.met)==0)
+				this.cancelarClick();
+		}
+		//carga el met ingresado en la tabla
+		public function cargarMET(met:Object):void{
+			//guarda al met, su rut antiguo y su contrasena
+			this.met= new MET(met.rut);
+			MetActivo.rutSeleccionado = met.rut;
+			this.met.contrasena = met.contrasena;
+			this.rutAntiguo = met.rut;
+			//carga los datos en la tabla
+			this.rutInput.text = met.rut.substr(0, met.rut.length-1);	
+			this.rutInput0.text = met.rut.charAt(met.rut.length-1);	
+			this.alergiasInput.text = met.alergias;
+			this.apellidoInput.text = met.apellidos;
+			this.bancoComboInput.selectedItem = met.banco;
+			this.contactoEmergInput.text = met.contacto_emerg;
+			this.cuentaInput.text = met.cuenta_cte;
+			this.direccionInput.text = met.direccion;
+			this.direccionEmergInput.text = met.direccion_emerg;
+			this.fonoCelularInput.text = met.fono_cel;
+			this.fonoEmergInput.text = met.fono_emerg;
+			this.fonoParticularInput.text = met.fono_particular;
+			this.grupoEmergInput.text = met.grupo_sangre;
+			this.nombreInput.text = met.nombres;
+			this.permisosInput.selectedItem = met.permiso;
+			this.profesionInput.text = met.profesion;
+			if(met.programable == 1)
+				this.programable.selected=true;
+			else
+				this.programable.selected=false;
+			this.relacionEmergInput.text = met.relacion_emerg;
+			this.afpInput.selectedItem = met.afp;
+			this.conflictoInput.text = met.conflicto_intereses;
+			this.contraindicacionesInput.text = met.contraindicaciones;
+			this.emailInput.text = met.email;
+			this.estadoCivilInput.selectedItem = met.estado_civil;
+			this.factorRHCombo.selectedItem = met.factor_rh;
+			this.fechaIngresoInput.selectedDate = this.getDateFromString(met.fecha_ingreso);
+			this.fechaNacimientoInput.selectedDate = this.getDateFromString(met.fecha_nacimiento);
+			this.isapreComboInput.selectedItem = met.isapre;
+			this.obsInput.text = met.observaciones;
+			this.postGradoInput.text = met.post_grado;
+			this.problemasLegalesInput.text = met.problemas_legales;
+			this.problemasSaludInput.text = met.problemas_salud;
+			this.profesion_casaInput.text = met.profesion_casa;
+			this.postGrado_casaInput.text = met.post_grado_casa;
+			this.tipoMetInput.selectedItem = met.tipo;
+			this.met.archivo = met.archivo;
+		}
+		private function getDateFromString(stringDate:String):Date{
+			var finalDate:Date = new Date;
+			var s:Array;
+	    	s = stringDate.split("-");
+	    	finalDate.fullYear = s[0];
+	    	finalDate.month = s[1]-1;
+	    	finalDate.date = s[2];
+	    	return finalDate;
+		}
+		private function getFormattedDate(date:Date):String{
+			var finalDate:String;
+			finalDate = date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
+			return finalDate;
+		}
+		private function descargarClick():void{
+			var request:URLRequest = new URLRequest();  
+                request.url = "http://www.kimen.cl/amfphp/services/uploads/archivos_"+MetActivo.rutSeleccionado+".rar";  
+                var fr:FileReference = new FileReference; 
+                fr.download(request); 
+        	
+		}		
+		private function handleRemoteResultEvent(event:ResultEvent):void {
+			
+			//Alert.show("Mensaje: "+event.result.filename);
+			
+        	this.resultado = event;
+        	this.saveFile();
+		}
+		private function saveFile():void{
+			//Alert.show("Mensaje:");
+			refUploadFile.save("texto", "text.txt");
+		}
+		//formatea los datefield al formato dd/mm/aaaa
+		private function dateFieldInit(date:DateField):void {
+       		date.dayNames=['Dom', 'Lun', 'Mar', 
+       		'Mie', 'Jue', 'Vie', 'Sab'];
+       		date.monthNames=['Enero','Febrero','Marzo','Abril',
+            'Mayo','Junio','Julio','Agosto','Septiembre',
+            'Octubre','Noviembre','Diciembre'];
+              	
+            date.firstDayOfWeek = 1;
+            date.selectedDate = (new Date());
+            date.formatString="DD/MM/YYYY" ;
+               
+  		}
+   
+		
+	]]>
+</mx:Script>
+	<mx:Text x="10" y="10" text="Edición de un MET" fontSize="11"/>
+	<mx:Button x="674" y="771" label="Guardar" id="registrarButton" click="{guardarClick()}"/>
+	<mx:Button x="591" y="772" label="Cancelar" click="cancelarClick()"/>
+	<mx:Canvas x="11" y="37" width="735" height="726" borderStyle="inset">
+		<mx:Text x="199" y="36" text="Nombres"/>
+		<mx:TextInput x="199" y="62" width="160" id="nombreInput"/>
+		<mx:Text x="365" y="36" text="Apellidos"/>
+		<mx:TextInput x="365" y="62" id="apellidoInput" width="160"/>
+		<mx:Text x="30" y="36" text="Rut"/>
+		<mx:Text x="152" y="64" text="-"/>
+		<mx:TextInput x="30" y="62" id="rutInput" width="114" maxChars="8" toolTip="ejemplo de rut: 11222333-4"/>
+		<mx:TextInput x="170" y="62" id="rutInput0" width="22" maxChars="1"/>
+		<mx:Text x="30" y="90" text="Direccion particular"/>
+		<mx:TextInput x="30" y="116" id="direccionInput" width="160"/>
+		<mx:Text x="196" y="90" text="Fono particular"/>
+		<mx:TextInput x="196" y="116" id="fonoParticularInput" width="160"/>
+		<mx:Text x="365" y="92" text="Celular"/>
+		<mx:TextInput x="365" y="118" id="fonoCelularInput" width="160"/>
+		<mx:Text x="30" y="202" text="Profesión"/>
+		<mx:TextInput x="30" y="228" id="profesionInput" width="160"/>
+		<mx:Text x="198" y="202" text="Casa de estudios Profesión"/>
+		<mx:TextInput x="198" y="228" id="profesion_casaInput" width="160"/>
+		<mx:Text x="30" y="258" text="N° cuenta corriente"/>
+		<mx:TextInput x="30" y="284" id="cuentaInput" width="160"/>
+		<mx:Text x="197" y="258" text="Banco"/>
+		<mx:Text x="365" y="260" text="Isapre"/>
+		<mx:Text x="532" y="260" text="A.F.P."/>
+		<mx:Text x="30" y="314" text="Conflicto de intereses"/>
+		<mx:TextInput x="30" y="340" id="conflictoInput" width="327"/>
+		<mx:Text x="365" y="314" text="Problemas legales"/>
+		<mx:TextInput x="365" y="340" id="problemasLegalesInput" width="328"/>
+		<mx:Text x="31" y="146" text="Fecha de ingreso"/>
+		<mx:Text x="366" y="202" text="Post-Grado"/>
+		<mx:TextInput x="366" y="228" id="postGradoInput" width="160"/>
+		<mx:Text x="533" y="202" text="Casa de estudios Post-Grado"/>
+		<mx:TextInput x="533" y="228" id="postGrado_casaInput" width="160"/>
+		<mx:Text x="533" y="92" text="E-mail"/>
+		<mx:TextInput x="533" y="118" id="emailInput" width="160"/>
+		<mx:Text x="533" y="36" text="Fecha de nacimiento"/>
+		<mx:Text x="198" y="146" text="Estado Civil"/>
+		<mx:Text x="30" y="370" text="Permisos"/>
+		<mx:CheckBox x="365" y="396" label="Programable" width="160" id="programable"/>
+		<mx:ComboBox x="198" y="172" width="159" id="estadoCivilInput">
+			<mx:dataProvider>
+				<mx:Array id="listaEstadoCivil">
+				   	<mx:String>Soltero(a)</mx:String>
+				       <mx:String>Casado(o)</mx:String>
+				       <mx:String>Separado(a)</mx:String>
+				       <mx:String>Viudo(a)</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="30" y="396" width="159" id="permisosInput">
+		<mx:dataProvider>
+			<mx:Array id="listaPermisos">
+			    <mx:String>Usuario</mx:String>
+			    <mx:String>Usuario Externo</mx:String>
+				<mx:String>Coordinación</mx:String>
+			    <mx:String>Gerencia</mx:String>
+			</mx:Array>
+		</mx:dataProvider>
+	</mx:ComboBox>
+		<mx:ComboBox x="365" y="284" width="159" id="isapreComboInput">
+			<mx:dataProvider>
+				<mx:Array id="listaIsapres">
+					<mx:String>No pertenece a Isapre</mx:String>
+					<mx:String>Banmédica</mx:String>
+					<mx:String>Colmena Golden Cross</mx:String>
+				    <mx:String>Consalud</mx:String>
+				    <mx:String>Cruz del Norte</mx:String>
+				    <mx:String>CruzBlanca</mx:String>
+				    <mx:String>Rio Blanco</mx:String>
+				    <mx:String>Masvida</mx:String>
+				    <mx:String>Vida Tres</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="534" y="284" width="159" id="afpInput">
+			<mx:dataProvider>
+				<mx:Array id="listaAfp">
+					<mx:String>No pertenece a A.F.P.</mx:String>
+					<mx:String>A.F.P. Modelo</mx:String>
+					<mx:String>A.F.P. Capital</mx:String>
+					<mx:String>A.F.P. Cuprum</mx:String>
+					<mx:String>A.F.P. Habitat</mx:String>
+					<mx:String>A.F.P. Planvital</mx:String>
+					<mx:String>A.F.P. Provida</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:ComboBox x="198" y="284" width="159" id="bancoComboInput">
+			<mx:dataProvider>
+				<mx:Array id="listaBancos">
+					<mx:String>No tiene cuenta</mx:String>
+					<mx:String>Banco BBVA</mx:String>
+					<mx:String>Banco BCI</mx:String>
+					<mx:String>Banco BCI Nova</mx:String>
+					<mx:String>Banco BICE</mx:String>
+					<mx:String>Banco Condell</mx:String>
+					<mx:String>Banco Consorcio</mx:String>
+					<mx:String>Banco CrediChile</mx:String>
+					<mx:String>Banco de Chile</mx:String>
+					<mx:String>Banco de la Nación Argentina</mx:String>
+					<mx:String>Banco do Brasil</mx:String>
+					<mx:String>Banco Edwards-Citi</mx:String>
+					<mx:String>BancoEstado</mx:String>
+					<mx:String>Banco Desarrollo</mx:String>
+					<mx:String>Banco Falabella</mx:String>
+					<mx:String>Banco HSBC</mx:String>
+					<mx:String>Banco Internacional</mx:String>
+					<mx:String>Banco Itaú</mx:String>
+					<mx:String>Banco Paris</mx:String>
+					<mx:String>Banco Penta</mx:String>
+					<mx:String>Banco RBS</mx:String>
+					<mx:String>Banco Ripley</mx:String>
+					<mx:String>Banco Santander</mx:String>
+					<mx:String>Banco Santander Banefe</mx:String>
+					<mx:String>Banco Security</mx:String>
+					<mx:String>CorpBanca</mx:String>
+					<mx:String>Deutsche Bank</mx:String>
+					<mx:String>JP Morgan Chase Bank</mx:String>
+					<mx:String>Rabobank</mx:String>
+					<mx:String>Scotiabank</mx:String>
+					<mx:String>TBanc</mx:String>
+					<mx:String>The Bank of Tokyo-Mitsubishi</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:Text x="30" y="10" text="Datos Personales" fontWeight="bold"/>
+		<mx:DateField x="533" y="62" width="162" id="fechaNacimientoInput" yearNavigationEnabled="true"/>
+		<mx:DateField x="30" y="172" width="160" id="fechaIngresoInput" yearNavigationEnabled="true"/>
+		<mx:Text x="33.5" y="436" text="En caso de emergencias" fontWeight="bold"/>
+		<mx:Text x="33.5" y="462" text="Contacto"/>
+		<mx:TextInput x="33.5" y="488" id="contactoEmergInput" width="160"/>
+		<mx:Text x="200.5" y="462" text="Relación"/>
+		<mx:TextInput x="201.5" y="488" id="relacionEmergInput" width="160"/>
+		<mx:Text x="369.5" y="462" text="Dirección"/>
+		<mx:TextInput x="369.5" y="488" id="direccionEmergInput" width="160"/>
+		<mx:Text x="33.5" y="518" text="Fono"/>
+		<mx:TextInput x="33.5" y="544" id="fonoEmergInput" width="160"/>
+		<mx:Text x="201.5" y="518" text="Grupo de sangre"/>
+		<mx:TextInput x="202.5" y="544" id="grupoEmergInput" width="160"/>
+		<mx:Text x="369.5" y="518" text="Factor RH"/>
+		<mx:Text x="33.5" y="574" text="Alergias"/>
+		<mx:Text x="201.5" y="574" text="Contraindicaciones"/>
+		<mx:Text x="370.5" y="574" text="Problemas de salud"/>
+		<mx:ComboBox x="370.5" y="544" id="factorRHCombo" width="160">
+			<mx:dataProvider>
+				<mx:Array id="listaFactor">
+				      	<mx:String>Positivo</mx:String>
+				       <mx:String>Negativo</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+		<mx:TextArea x="201.5" y="600" width="160" borderStyle="inset" id="contraindicacionesInput"/>
+		<mx:TextArea x="369.5" y="600" width="160" borderStyle="inset" id="problemasSaludInput"/>
+		<mx:Text x="537.5" y="574" text="Observaciones"/>
+		<mx:TextArea x="537.5" y="600" width="160" borderStyle="inset" id="obsInput"/>
+		<mx:TextArea x="33.5" y="600" width="160" borderStyle="inset" id="alergiasInput"/>
+		<mx:HRule x="13" y="426" width="708"/>
+		<ns1:SubirArchivo x="33.5" y="652" id="subirComponente" folder="mets" 
+			filename="{MetActivo.rutSeleccionado}" errorMessage="Error, ingrese Rut válido">
+		</ns1:SubirArchivo>
+		<mx:Text x="198" y="370" text="Tipo de MET"/>
+		<mx:ComboBox x="198" y="396" width="159" id="tipoMetInput">
+			<mx:dataProvider>
+				<mx:Array id="listaTiposMet">
+				   	<mx:String>Ex MET</mx:String>
+				    <mx:String>Consultor</mx:String>
+				    <mx:String>Facilitador</mx:String>
+				    <mx:String>Socio Estratégico</mx:String>
+				    <mx:String>Otro</mx:String>
+				</mx:Array>
+			</mx:dataProvider>
+		</mx:ComboBox>
+	</mx:Canvas>
+	
+</mx:Canvas>
